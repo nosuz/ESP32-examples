@@ -1,0 +1,16 @@
+menu "Blink Config"
+
+    config BLINK_GPIO
+        int "Blink GPIO number"
+        range 0 38
+        default 5
+        help
+            Set GPIO number (IOxx) to blink.
+
+    config BLINK_PERIOD
+        int "Blink period"
+        range 1000 10000
+        help
+            Set blink period in sec..
+
+endmenu
