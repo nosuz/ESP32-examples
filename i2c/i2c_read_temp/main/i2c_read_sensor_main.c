@@ -41,8 +41,19 @@ static esp_err_t i2c_master_init(void)
 static float read_adt7410(void)
 {
     esp_err_t ret;
-    uint8_t data[2];
-    uint16_t _temp;
+
+    union
+    {
+        uint16_t temp;
+        struct temp_struct
+        {
+            // Little Endian
+            uint8_t high;
+            uint8_t low;
+        } data;
+
+    } i2c_data;
+
     float temp;
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -54,22 +65,27 @@ static float read_adt7410(void)
     i2c_master_write_byte(cmd, ADT7410_TEMP_MSB, ACK_EN);
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (ADT7410_ADDR << 1) | I2C_MASTER_READ, ACK_EN);
-    i2c_master_read_byte(cmd, &data[0], I2C_MASTER_ACK);
-    i2c_master_read_byte(cmd, &data[1], I2C_MASTER_NACK);
+    i2c_master_read_byte(cmd, &i2c_data.data.low, I2C_MASTER_ACK);
+    i2c_master_read_byte(cmd, &i2c_data.data.high, I2C_MASTER_NACK);
     i2c_master_stop(cmd);
     // Execute and return status, should return 0
     ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, 1000 / portTICK_RATE_MS);
     printf("I2C result: %02X", ret);
     i2c_cmd_link_delete(cmd);
 
-    printf("%02X", data[0]);
-    printf("%02X >> ", data[1]);
+    // printf("%02X", data[0]);
+    // printf("%02X >> ", data[1]);
+    // _temp = (data[0] << 8 | data[1]) / 8;
+    // temp = 0.0625 * _temp;
 
-    _temp = (data[0] << 8 | data[1]) / 8;
-    temp = 0.0625 * _temp;
+    // printf("%04X\n", _temp);
+    // printf("%.2f'C\n", 0.0625 * _temp);
 
-    printf("%04X\n", _temp);
-    printf("%.2f'C\n", 0.0625 * _temp);
+    printf("%02X", i2c_data.data.low);
+    printf(" %02X >> ", i2c_data.data.high);
+    printf("%04X\n", i2c_data.temp);
+
+    temp = 0.0625 * (i2c_data.temp >> 3); // 13-bits
 
     return temp;
 }
