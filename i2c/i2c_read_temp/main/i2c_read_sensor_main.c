@@ -73,14 +73,6 @@ static float read_adt7410(void)
     printf("I2C result: %02X", ret);
     i2c_cmd_link_delete(cmd);
 
-    // printf("%02X", data[0]);
-    // printf("%02X >> ", data[1]);
-    // _temp = (data[0] << 8 | data[1]) / 8;
-    // temp = 0.0625 * _temp;
-
-    // printf("%04X\n", _temp);
-    // printf("%.2f'C\n", 0.0625 * _temp);
-
     printf("%02X", i2c_data.data.low);
     printf(" %02X >> ", i2c_data.data.high);
     printf("%04X\n", i2c_data.temp);
