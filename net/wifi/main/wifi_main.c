@@ -13,6 +13,7 @@
 #include "nvs_flash.h"
 
 #include "wifi.h"
+#include "http_get.h"
 
 static const char *TAG = "wifi_main";
 
@@ -34,6 +35,7 @@ void app_main(void)
         ESP_LOGI(TAG, "Try to connect");
         wifi_connect();
         wifi_wait_connection();
+        run_http_get();
         vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
         wifi_disconnect();
         ESP_LOGI(TAG, "Disconnected");
