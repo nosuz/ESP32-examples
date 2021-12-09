@@ -157,12 +157,12 @@ int wifi_wait_connection(void)
     if (bits & WIFI_CONNECTED_BIT)
     {
         connected = 1;
-        ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+        ESP_LOGI(TAG, "connected to ap SSID:%s",
+                 EXAMPLE_ESP_WIFI_SSID);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
-        ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
+        ESP_LOGI(TAG, "failed to connect to SSID:%s, password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
     }
     else
