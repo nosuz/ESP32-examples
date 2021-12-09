@@ -77,3 +77,11 @@ CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN=y
 ```
 
 参照[FAILED: esp-idf/mbedtls/x509_crt_bundle (Invalid certificate) (IDFGH-3345)](https://github.com/espressif/esp-idf/issues/5322)
+
+### これまで動いていたサンプルが、再コンパイルしたら動かなくなった。解決方法は？
+
+`esp-idf`のモジュールをアップデートしてみる。
+
+```
+git submodule update --init
+```
