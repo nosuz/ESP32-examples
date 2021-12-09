@@ -34,7 +34,10 @@ void app_main(void)
     {
         ESP_LOGI(TAG, "Try to connect");
         wifi_connect();
-        wifi_wait_connection();
+        if (!wifi_wait_connection())
+        {
+            break;
+        }
         run_http_get();
         vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
         wifi_disconnect();
