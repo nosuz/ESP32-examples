@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
@@ -96,22 +97,32 @@ void wifi_init(void)
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASS,
-            /* Setting a password implies station will connect to all security modes including WEP/WPA.
-             * However these modes are deprecated and not advisable to be used. Incase your Access point
-             * doesn't support WPA2, these mode can be enabled by commenting below line */
-            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-
-            .pmf_cfg = {
-                .capable = true,
-                .required = false},
-        },
-    };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+
+    // enable Wi-Fi NVS flash in menuconfig, Componet config -> Wi-Fi
+    // enabled in default.
+    wifi_config_t wifi_config;
+    esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
+    if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
+    {
+        ESP_LOGI(TAG, "use hardcode ssid and password.");
+        wifi_config_t wifi_config = {
+            .sta = {
+                .ssid = EXAMPLE_ESP_WIFI_SSID,
+                .password = EXAMPLE_ESP_WIFI_PASS,
+                /* Setting a password implies station will connect to all security modes including WEP/WPA.
+                 * However these modes are deprecated and not advisable to be used. Incase your Access point
+                 * doesn't support WPA2, these mode can be enabled by commenting below line */
+                .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+
+                .pmf_cfg = {.capable = true, .required = false},
+            },
+        };
+    }
+    else
+    {
+        ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
+    }
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     s_wifi_event_group = xEventGroupCreate();
