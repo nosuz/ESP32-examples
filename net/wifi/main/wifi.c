@@ -10,11 +10,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
+// #include "esp_wpa2.h"
 #include "esp_event.h"
 #include "esp_log.h"
 
-#include "lwip/err.h"
-#include "lwip/sys.h"
+// #include "esp_netif.h"
+// #include "lwip/err.h"
+// #include "lwip/sys.h"
 
 /* The examples use WiFi configuration that you can set via project configuration menu
 
@@ -88,10 +90,7 @@ void wifi_init(void)
 {
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
 
-    s_wifi_event_group = xEventGroupCreate();
-
     ESP_ERROR_CHECK(esp_netif_init());
-
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
@@ -114,18 +113,11 @@ void wifi_init(void)
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,
-                                               ESP_EVENT_ANY_ID,
-                                               &event_handler,
-                                               NULL));
-    // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,
-    //                                            WIFI_EVENT_STA_START,
-    //                                            &event_handler,
-    //                                            NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT,
-                                               IP_EVENT_STA_GOT_IP,
-                                               &event_handler,
-                                               NULL));
+
+    s_wifi_event_group = xEventGroupCreate();
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_START, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
     ESP_LOGI(TAG, "wifi_init finished.");
 }
 
@@ -146,24 +138,18 @@ int wifi_wait_connection(void)
     int connected = 0;
     /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
      * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-                                           pdFALSE,
-                                           pdFALSE,
-                                           portMAX_DELAY);
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
      * happened. */
     if (bits & WIFI_CONNECTED_BIT)
     {
         connected = 1;
-        ESP_LOGI(TAG, "connected to ap SSID:%s",
-                 EXAMPLE_ESP_WIFI_SSID);
+        ESP_LOGI(TAG, "connected to ap SSID:%s", EXAMPLE_ESP_WIFI_SSID);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
-        ESP_LOGI(TAG, "failed to connect to SSID:%s, password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+        ESP_LOGI(TAG, "failed to connect to SSID:%s, password:%s", EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
     }
     else
     {
@@ -178,9 +164,7 @@ void wifi_disconnect(void)
     // esp_wifi_disconnect();
     ESP_LOGI(TAG, "wifi stop.");
     stop_wifi_flag = 1;
-    // ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT,
-    //                                              WIFI_EVENT_STA_DISCONNECTED,
-    //                                              &event_handler));
+    // ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler));
     esp_wifi_stop();
     xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
