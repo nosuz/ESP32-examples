@@ -36,8 +36,15 @@ git clone https://github.com/nosuz/ESP32-examples.git
 
 ### コンパイル
 
+`.bashrc`に aias を設定しておくと便利。
+
 ```
-. $HOME/esp/esp-idf/export.sh
+alias esp-idf='. $HOME/esp/esp-idf/export.sh'
+```
+
+```
+# . $HOME/esp/esp-idf/export.sh
+esp-idf
 
 # それぞれのサンプルがあるディレクトリーに移動する。
 cd EXSAMPLE_DIR
