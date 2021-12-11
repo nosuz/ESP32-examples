@@ -1,0 +1,8 @@
+menu "Example Configuration"
+
+    config ESP_MAXIMUM_RETRY
+        int "Maximum retry"
+        default 3
+        help
+            Set the Maximum retry to try reconnecting to the AP.
+endmenu
