@@ -55,6 +55,14 @@ idf.py -p /dev/ttyACM0 flash
 idf.py -p /dev/ttyACM0 monitor # コンソールログ等を確認する場合
 ```
 
+## 新しいプロジェクト
+
+新しいプロジェクトは、`idf.py`コマンドで作成できる。
+
+```
+idf.py create-project --path project_dir project_name
+```
+
 ## trouble shooting
 
 ### 次のようなエラーが表示されてコンパイルが止まる。解消方法は？
