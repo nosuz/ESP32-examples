@@ -5,6 +5,10 @@
 #include "esp_sleep.h"
 #include "freertos/task.h"
 
+#if IDF_TARGET == esp32c3
+#include "driver/temp_sensor.h"
+#endif
+
 #include "AQM0802A.h"
 
 static const char *TAG = "i2c-read-sensor";
@@ -93,6 +97,14 @@ void app_main(void)
     ESP_LOGI(TAG, "I2C initialized successfully");
     aqm0802a_init(I2C_MASTER_NUM);
 
+#if IDF_TARGET == esp32c3
+    temp_sensor_config_t internal_temp_sensor = {
+        .dac_offset = TSENS_DAC_L2,
+        .clk_div = 6,
+    };
+    temp_sensor_set_config(internal_temp_sensor);
+#endif
+
     while (1)
     {
         ESP_LOGI(TAG, "Read sendor");
@@ -102,12 +114,22 @@ void app_main(void)
         esp_light_sleep_start();
         */
         aqm0802a_clear_display(I2C_MASTER_NUM);
-        sprintf(temp_str, "Tm=%.1fC", cur_tmp);
+        sprintf(temp_str, "Te=%.1fC", cur_tmp);
         aqm0802a_print(I2C_MASTER_NUM, temp_str);
 
+#if IDF_TARGET == esp32c3
+        float tsens_out;
+        temp_sensor_read_celsius(&tsens_out);
+        ESP_LOGI(TAG, "Inner Temp.: %.1f", tsens_out);
+
+        aqm0802a_move_cursor(I2C_MASTER_NUM, 0, 1);
+        sprintf(temp_str, "Ti=%.1fC", tsens_out);
+        aqm0802a_print(I2C_MASTER_NUM, temp_str);
+#endif
         vTaskDelay(2 * 1000 / portTICK_PERIOD_MS);
+
         aqm0802a_clear_display(I2C_MASTER_NUM);
-        vTaskDelay(2 * 1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1 * 1000 / portTICK_PERIOD_MS);
     }
 
     ESP_ERROR_CHECK(i2c_driver_delete(I2C_MASTER_NUM));
