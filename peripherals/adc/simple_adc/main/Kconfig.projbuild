@@ -1,0 +1,12 @@
+menu "ADC Config"
+
+    config ADC1_CHANNEL
+        int "ADC1 channel number"
+        range 0 8 if IDF_TARGET_ESP32
+        range 0 5 if IDF_TARGET_ESP32C3
+        range 0 10 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set ADC1 channel number (ADC1_x) to read.
+
+endmenu
