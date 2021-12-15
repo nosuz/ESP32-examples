@@ -63,6 +63,12 @@ idf.py -p /dev/ttyACM0 monitor # コンソールログ等を確認する場合
 idf.py create-project --path project_dir project_name
 ```
 
+## eFuse の確認
+
+```
+espefuse.py -p /dev/ttyACM0 summary
+```
+
 ## trouble shooting
 
 ### 次のようなエラーが表示されてコンパイルが止まる。解消方法は？
