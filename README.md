@@ -17,6 +17,7 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | L チカ                             | GPIO に接続された LED を点滅させる。最も簡単な GPIO 操作のサンプル。                               | [gpio/blink](gpio/blink)               |
 | I2C 温度センサーと液晶ディスプレイ | I2C バスに接続された温度センサー ADT741 を読み取り、液晶ディスプレイ AQM0802A に表示するサンプル。 | [i2c/i2c_read_temp](i2c/i2c_read_temp) |
 | ロードセルセンサー HX711           | ロードセルの値を HX711 で読み込むサンプル。                                                        | [gpio/hx711](gpio/hx711)               |
+| SHT40 で温度・湿度測定             | I2C 接続の SHT40 を使用して温度と湿度を調べる。                                                    | [i2c/read_sht40](i2c/read_sht40)       |
 
 ## 使用方法
 
