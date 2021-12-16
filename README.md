@@ -19,6 +19,7 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | ロードセルセンサー HX711           | ロードセルの値を HX711 で読み込むサンプル。                                                        | [gpio/hx711](gpio/hx711)                     |
 | WiFi                               | AP に接続するサンプル。接続と切断を 5 秒毎に繰り返す。                                             | [net/wifi](net/wifi)                         |
 | WiFi SmartConfig                   | AP を SmartConfig で設定するサンプル。                                                             | [net/wifi-smartconfig](net/wifi-smartconfig) |
+| Config by WPS                      | WPS ボタンで AP の SSID とパスワードを自動設定する。                                               | [net/wps](net/wps)                           |
 
 ## 使用方法
 
