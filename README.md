@@ -19,6 +19,9 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | ロードセルセンサー HX711           | ロードセルの値を HX711 で読み込むサンプル。                                                        | [gpio/hx711](gpio/hx711)                                 |
 | SHT40 で温度・湿度測定             | I2C 接続の SHT40 を使用して温度と湿度を調べる。                                                    | [i2c/read_sht40](i2c/read_sht40)                         |
 | Read Analog                        | ADC1 の値を読み取る。キャリブレーションが有効の場合は、それを使用可能。                            | [peripherals/adc/simple_adc](peripherals/adc/simple_adc) |
+| WiFi                               | AP に接続するサンプル。接続と切断を 5 秒毎に繰り返す。                                             | [net/wifi](net/wifi)                                     |
+| WiFi SmartConfig                   | AP を SmartConfig で設定するサンプル。                                                             | [net/wifi-smartconfig](net/wifi-smartconfig)             |
+| Config by WPS                      | WPS ボタンで AP の SSID とパスワードを自動設定する。                                               | [net/wps](net/wps)                                       |
 
 ## 使用方法
 
@@ -37,8 +40,15 @@ git clone https://github.com/nosuz/ESP32-examples.git
 
 ### コンパイル
 
+`.bashrc`に aias を設定しておくと便利。
+
 ```
-. $HOME/esp/esp-idf/export.sh
+alias esp-idf='. $HOME/esp/esp-idf/export.sh'
+```
+
+```
+# . $HOME/esp/esp-idf/export.sh
+esp-idf
 
 # それぞれのサンプルがあるディレクトリーに移動する。
 cd EXSAMPLE_DIR
@@ -93,3 +103,11 @@ CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN=y
 ```
 
 参照[FAILED: esp-idf/mbedtls/x509_crt_bundle (Invalid certificate) (IDFGH-3345)](https://github.com/espressif/esp-idf/issues/5322)
+
+### これまで動いていたサンプルが、再コンパイルしたら動かなくなった。解決方法は？
+
+`esp-idf`のモジュールをアップデートしてみる。
+
+```
+git submodule update --init
+```
