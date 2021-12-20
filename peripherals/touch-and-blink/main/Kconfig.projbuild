@@ -1,0 +1,20 @@
+menu "Tuch and Blink Config"
+
+    config TOUCH_PAD
+        int "Triger touch pad number"
+        range 0 9 if IDF_TARGET_ESP32
+        range 0 14 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set touch pad number (TOUCHx) to blink.
+
+    config GPIO_LED
+        int "Blink LED gpio number"
+        range 0 48
+        default 0 if IDF_TARGET_ESP32
+        default 45 if IDF_TARGET_ESP32S3
+        default 5
+        help
+            Set GPIO number (IOxx) to blink.
+
+endmenu
