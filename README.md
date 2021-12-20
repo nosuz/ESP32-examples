@@ -67,6 +67,16 @@ idf.py -p /dev/ttyACM0 flash
 idf.py -p /dev/ttyACM0 monitor # コンソールログ等を確認する場合
 ```
 
+## NVS(不揮発メモリ)の消去
+
+```
+# erase NVS partition
+parttool.py -p /dev/ttyUSB0 erase_partition --partition-name=nvs
+
+# erase all contents
+idf.py -p /dev/ttyUSB0 erase-flash
+```
+
 ## 新しいプロジェクト
 
 新しいプロジェクトは、`idf.py`コマンドで作成できる。
