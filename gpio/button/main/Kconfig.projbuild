@@ -1,0 +1,36 @@
+menu "Button Sample Configuration"
+
+    config BUTTON_PIN
+        int "Button GPIO"
+        range 0 39 if IDF_TARGET_ESP32
+        range 0 21 if IDF_TARGET_ESP32C3
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set Button GPIO number (IOxx).
+
+    config LONG_DURATION
+        int "Long pressed duration"
+        range 2 6
+        default 2
+        help
+            Set a lengh for long press.
+
+
+    config LED_PIN
+        int "GPIO connected to LED"
+        range 0 39 if IDF_TARGET_ESP32
+        range 0 21 if IDF_TARGET_ESP32C3
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set GPIO number (IOxx) for LED.
+
+    config BLINK_PERIOD
+        int "Blink period as ms"
+        range 100 1000
+        default 500
+        help
+            Set blink period.
+
+endmenu
