@@ -15,18 +15,14 @@
 #include "esp_event.h"
 #include "esp_log.h"
 
-// #include "esp_netif.h"
-// #include "lwip/err.h"
-// #include "lwip/sys.h"
-
 /* The examples use WiFi configuration that you can set via project configuration menu
 
    If you'd rather not, just change the below entries to strings with
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
-#define EXAMPLE_ESP_MAXIMUM_RETRY CONFIG_ESP_MAXIMUM_RETRY
+#define ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
+#define ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
+#define ESP_MAXIMUM_RETRY CONFIG_ESP_MAXIMUM_RETRY
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
@@ -40,7 +36,9 @@ static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "wifi";
 
 static int s_retry_num = 0;
-static int stop_wifi_flag = 0;
+static bool wifi_stop_flag = false;
+static bool initialized_wifi = false;
+static bool started_wifi = false;
 
 static void event_handler(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
@@ -55,18 +53,18 @@ static void event_handler(void *arg, esp_event_base_t event_base,
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_STOP)
     {
         ESP_LOGI(TAG, "stoped wifi");
-        stop_wifi_flag = 0;
+        wifi_stop_flag = false;
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
         xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
 
-        if (stop_wifi_flag)
+        if (wifi_stop_flag)
         {
             // skip retry connect if esp_wifi_stop is issued.
             ESP_LOGI(TAG, "stop wifi in progress");
         }
-        else if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY)
+        else if (s_retry_num < ESP_MAXIMUM_RETRY)
         {
             esp_wifi_connect();
             s_retry_num++;
@@ -103,8 +101,8 @@ void wifi_init(void)
     // enabled in default.
     wifi_config_t hard_coded_wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASS,
+            .ssid = ESP_WIFI_SSID,
+            .password = ESP_WIFI_PASS,
             /* Setting a password implies station will connect to all security modes including WEP/WPA.
              * However these modes are deprecated and not advisable to be used. Incase your Access point
              * doesn't support WPA2, these mode can be enabled by commenting below line */
@@ -131,19 +129,26 @@ void wifi_init(void)
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_START, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+
+    initialized_wifi = true;
     ESP_LOGI(TAG, "wifi_init finished.");
 }
 
 void wifi_connect(void)
 {
-    // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,
-    //                                            WIFI_EVENT_STA_DISCONNECTED,
-    //                                            &event_handler,
-    //                                            NULL));
-
-    ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "wifi started.");
-    // esp_wifi_connect();
+    if (initialized_wifi)
+    {
+        if (!started_wifi)
+        {
+            ESP_ERROR_CHECK(esp_wifi_start());
+            started_wifi = true;
+            ESP_LOGI(TAG, "wifi started.");
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG, "wifi not initialized.");
+    }
 }
 
 int wifi_wait_connection(void)
@@ -176,7 +181,7 @@ void wifi_disconnect(void)
 {
     // esp_wifi_disconnect();
     ESP_LOGI(TAG, "wifi stop.");
-    stop_wifi_flag = 1;
+    wifi_stop_flag = true;
     // ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler));
     esp_wifi_stop();
     xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
