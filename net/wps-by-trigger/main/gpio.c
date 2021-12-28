@@ -19,7 +19,6 @@
 
 #define GPIO_INPUT_PIN_SEL (1ULL << TRIGER_PIN)
 #define LONG_PRESS CONFIG_TRIGER_DURATION
-#define ESP_INTR_FLAG_DEFAULT 0
 
 static char *TAG = "gpio";
 
