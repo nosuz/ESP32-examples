@@ -41,6 +41,12 @@ void blink_led(void)
     xTimerReset(blink_timer, 0);
 }
 
+void set_led(bool state)
+{
+    ESP_LOGI(TAG, "Set LED %d", state);
+    gpio_set_level(GPIO_LED, state);
+}
+
 void button_press_handler(void *arg)
 {
     static int prev_level = 1;
