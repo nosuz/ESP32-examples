@@ -8,6 +8,7 @@
 #include "wifi.h"
 #include "http_serve.h"
 #include "m_dns.h"
+#include "spiffs.h"
 
 static const char *TAG = "server_main";
 
@@ -26,6 +27,8 @@ void app_main(void)
         ESP_LOGI(TAG, "Try to connect");
         wifi_connect();
     }
+
+    ESP_ERROR_CHECK(init_spiffs());
 
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
