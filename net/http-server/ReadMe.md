@@ -1,9 +1,10 @@
 ## REST API
 
-| endpoint |              |
-| -------- | ------------ |
-| /led_on  | Trun ON LED  |
-| /led_off | Turn OFF LED |
+| endpoint        |                                               |
+| --------------- | --------------------------------------------- |
+| /api/led_on     | Trun ON LED                                   |
+| /api/led_off    | Turn OFF LED                                  |
+| /api/led_status | Return the current LED status in JSON format. |
 
 test sample
 
@@ -16,8 +17,8 @@ $ avahi-browse -t -r _http._tcp
    port = [80]
    txt = []
 
-$ curl -v 'http://esp32.local/led_on'
-$ curl -v 'http://esp32.local/led_off'
+$ curl -v 'http://esp32.local/api/led_on'
+$ curl -v 'http://esp32.local/api/led_off'
 ```
 
 ## SPIFFS Filesystem
@@ -27,8 +28,29 @@ $ curl -v 'http://esp32.local/led_off'
   - Partition table: Partition Table -> Partition Table and Custom partition CSV file
 - Create a filesystem through main/CMakeLists.txt.
 
-## Error
+## Error 1
 
-`dangerous relocation: call8:`
+```
+dangerous relocation: call8:
+```
 
 `idf.py fullclean` followed by `idf.py build` solved the errors. I am not sure what's going on.
+
+## Error 2
+
+This error was shown when a web application acceses an ESP32 http server through npm proxy.
+
+```
+W (9885) httpd_parse: parse_block: request URI/header too long
+W (9885) httpd_txrx: httpd_resp_send_err: 431 Request Header Fields Too Large - Header fields are too long for server to interpret
+```
+
+Chnage ESP32 configuration by `idf.py menuconfig`. The configuration filed is in `Component config > HTTP Server > Max HTTP Request Header Length change 512 to 1024.`.
+
+## Web App
+
+Follow www/ReadMe.md
+
+## Button
+
+Long press makes WPS starts. When WPS starts the LED begin to blink.

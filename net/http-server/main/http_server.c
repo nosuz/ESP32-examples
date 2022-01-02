@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "esp_vfs.h"
+#include "cJSON.h"
 
 #include "gpio.h"
 
@@ -206,7 +207,30 @@ esp_err_t set_led_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-httpd_handle_t start_webserver(void)
+esp_err_t get_led_handler(httpd_req_t *req)
+{
+    ESP_LOGI(TAG, "Get LED status");
+    read_gpio();
+
+    httpd_resp_set_type(req, "application/json");
+    cJSON *root = cJSON_CreateObject();
+    if (read_led())
+    {
+        cJSON_AddTrueToObject(root, "led_status");
+    }
+    else
+    {
+        cJSON_AddFalseToObject(root, "led_status");
+    }
+    const char *json = cJSON_Print(root);
+    httpd_resp_sendstr(req, json);
+    free((void *)json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+httpd_handle_t
+start_webserver(void)
 {
     scratch = calloc(1, SCRATCH_BUFSIZE);
     if (!scratch)
@@ -245,18 +269,25 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &say_hello_chunk);
 
         httpd_uri_t set_led_on = {
-            .uri = "/led_on",
+            .uri = "/api/led_on",
             .method = HTTP_GET,
             .handler = set_led_handler,
             .user_ctx = "on"};
         httpd_register_uri_handler(server, &set_led_on);
 
         httpd_uri_t set_led_off = {
-            .uri = "/led_off",
+            .uri = "/api/led_off",
             .method = HTTP_GET,
             .handler = set_led_handler,
             .user_ctx = "off"};
         httpd_register_uri_handler(server, &set_led_off);
+
+        httpd_uri_t get_led = {
+            .uri = "/api/led_status",
+            .method = HTTP_GET,
+            .handler = get_led_handler,
+            .user_ctx = NULL};
+        httpd_register_uri_handler(server, &get_led);
 
         httpd_uri_t common_get_uri = {
             .uri = "/*",

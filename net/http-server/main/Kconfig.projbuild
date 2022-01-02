@@ -4,7 +4,8 @@ menu "HTTP Server Configuration"
         string "mDNS Hostname"
         default "esp32"
         help
-            mDNS Hostname
+            mDNS Hostname. Web application that controls LED status is
+            assuming EPS32 hostname is "esp32".
 
     config MDNS_INSTANCE
         string "mDNS Instance Name"

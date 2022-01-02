@@ -128,7 +128,8 @@ void config_gpio(void)
     ESP_LOGI(TAG, "Setup LED pin.");
     gpio_reset_pin(GPIO_LED);
     gpio_set_pull_mode(GPIO_LED, GPIO_FLOATING);
-    gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
+    gpio_set_direction(GPIO_LED, GPIO_MODE_INPUT_OUTPUT);
+    // gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
 
     press_timer = xTimerCreate("PRESS_TIMER", 5, pdFALSE, NULL, button_press_handler);
     // blink_timer expires every 500ms.
@@ -141,4 +142,9 @@ void config_gpio(void)
 int read_gpio(void)
 {
     return gpio_get_level(BUTTON_PIN);
+}
+
+int read_led(void)
+{
+    return gpio_get_level(GPIO_LED);
 }
