@@ -8,6 +8,14 @@
 test sample
 
 ```{bash}
-$ curl -v 'http://ESP32_IP_ADDRESS/led_on'
-$ curl -v 'http://ESP32_IP_ADDRESS/led_off'
+$ avahi-browse -t -r _http._tcp
++ wlp3s0 IPv4 HTTP Server                                   Web Site             local
+= wlp3s0 IPv4 HTTP Server                                   Web Site             local
+   hostname = [esp32.local]
+   address = [10.0.0.10]
+   port = [80]
+   txt = []
+
+$ curl -v 'http://esp32.local/led_on'
+$ curl -v 'http://esp32.local/led_off'
 ```

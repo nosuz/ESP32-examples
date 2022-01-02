@@ -7,6 +7,7 @@
 #include "nvs.h"
 #include "wifi.h"
 #include "http_serve.h"
+#include "m_dns.h"
 
 static const char *TAG = "server_main";
 
@@ -29,6 +30,9 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
+        ESP_LOGI(TAG, "mDNS service start");
+        start_mdns_service();
+
         ESP_LOGI(TAG, "HTTP server start");
         start_webserver();
     }

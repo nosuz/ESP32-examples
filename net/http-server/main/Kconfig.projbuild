@@ -1,5 +1,17 @@
 menu "HTTP Server Configuration"
 
+    config MDNS_HOSTNAME
+        string "mDNS Hostname"
+        default "esp32"
+        help
+            mDNS Hostname
+
+    config MDNS_INSTANCE
+        string "mDNS Instance Name"
+        default "ESP32 HTTP Server"
+        help
+            mDNS Instance Name
+
     config BUTTON_PIN
         int "WPS triger GPIO"
         range 0 39 if IDF_TARGET_ESP32
