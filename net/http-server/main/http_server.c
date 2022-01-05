@@ -336,5 +336,6 @@ void stop_webserver(httpd_handle_t server)
     if (server)
     {
         httpd_stop(server);
+        free(scratch);
     }
 }
