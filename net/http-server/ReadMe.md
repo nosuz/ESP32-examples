@@ -51,6 +51,8 @@ Chnage ESP32 configuration by `idf.py menuconfig`. The configuration filed is in
 
 Follow www/ReadMe.md
 
+If clients accept gzip encoding, the HTTP server returns gziped files.
+
 ## Button
 
 Long press makes WPS starts. When WPS starts the LED begin to blink.

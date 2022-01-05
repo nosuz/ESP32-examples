@@ -55,6 +55,7 @@ static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filepa
 esp_err_t common_get_handler(httpd_req_t *req)
 {
     char filepath[FILE_PATH_MAX];
+    char filepath_gzip[FILE_PATH_MAX];
     // ESP_LOGI(TAG, "scratch address: %x", scratch);
 
     ESP_LOGI(TAG, "Request URI: %s", req->uri);
@@ -68,15 +69,42 @@ esp_err_t common_get_handler(httpd_req_t *req)
     {
         strlcat(filepath, req->uri, sizeof(filepath));
     }
+    strlcat(filepath_gzip, filepath, sizeof(filepath));
+    strlcat(filepath_gzip, ".gz", sizeof(filepath));
 
-    ESP_LOGI(TAG, "Open file: %s", filepath);
-    int fd = open(filepath, O_RDONLY, 0);
+    int fd = -1;
+    if (httpd_req_get_hdr_value_len(req, "Accept-Encoding") > 0)
+    {
+        httpd_req_get_hdr_value_str(req, "Accept-Encoding", scratch, SCRATCH_BUFSIZE);
+        ESP_LOGI(TAG, "Accept-Encoding: %s", scratch);
+        if (strstr(scratch, "gzip"))
+        {
+            ESP_LOGI(TAG, "Open GZIP file: %s", filepath_gzip);
+            fd = open(filepath_gzip, O_RDONLY, 0);
+            if (fd >= 0)
+            {
+                ESP_LOGI(TAG, "Content-Encoding: gzip");
+                httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+            }
+            else
+            {
+                ESP_LOGI(TAG, "Failed to open GZIP.");
+            }
+        }
+    }
+
     if (fd == -1)
     {
-        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
-        /* Respond with 500 Internal Server Error */
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "File open error\n");
-        return ESP_FAIL;
+        // Requested file has no gziped file. Opend requested file.
+        ESP_LOGI(TAG, "Open file: %s", filepath);
+        fd = open(filepath, O_RDONLY, 0);
+        if (fd == -1)
+        {
+            ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+            /* Respond with 500 Internal Server Error */
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "File open error\n");
+            return ESP_FAIL;
+        }
     }
 
     set_content_type_from_file(req, filepath);
