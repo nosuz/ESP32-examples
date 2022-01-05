@@ -20,7 +20,13 @@ void start_mdns_service(void)
     mdns_hostname_set(MDNS_HOSTNAME);
     // mdns_instance_name_set(MDNS_INSTANCE);
 
-    mdns_service_add(MDNS_INSTANCE,
-                     "_http",
-                     "_tcp", 80, NULL, 0);
+    mdns_service_add(
+        MDNS_INSTANCE,
+        "_http",
+        "_tcp", 80, NULL, 0);
+}
+
+void stop_mdns_service(void)
+{
+    mdns_free();
 }
