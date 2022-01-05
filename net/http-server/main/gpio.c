@@ -21,6 +21,16 @@ static char *TAG = "gpio";
 TimerHandle_t press_timer;
 TimerHandle_t blink_timer;
 
+int read_gpio(void)
+{
+    return gpio_get_level(BUTTON_PIN);
+}
+
+int read_led(void)
+{
+    return gpio_get_level(GPIO_LED);
+}
+
 void start_blink(void)
 {
     xTimerStart(blink_timer, 0);
@@ -82,6 +92,7 @@ void button_press_handler(void *arg)
         {
             pressed_time = esp_timer_get_time() - pressed_at;
             printf("Pushed button: %lld ms\n", pressed_time / 1000);
+            set_led(!(bool)read_led());
         }
     }
     prev_level = cur_level;
@@ -137,14 +148,4 @@ void config_gpio(void)
 
     gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     gpio_isr_handler_add(BUTTON_PIN, pin_intr_handler, (void *)BUTTON_PIN); // don't need gpio_intr_enable()
-}
-
-int read_gpio(void)
-{
-    return gpio_get_level(BUTTON_PIN);
-}
-
-int read_led(void)
-{
-    return gpio_get_level(GPIO_LED);
 }

@@ -54,3 +54,5 @@ Follow www/ReadMe.md
 ## Button
 
 Long press makes WPS starts. When WPS starts the LED begin to blink.
+
+Short press toggles LED status.
