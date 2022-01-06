@@ -12,8 +12,9 @@ menu "Blink Config"
 
     config BLINK_PERIOD
         int "Blink period"
-        range 1000 10000
+        range 10 5000
+        default 500
         help
-            Set blink period in sec..
+            Set blink period in ms.
 
 endmenu
