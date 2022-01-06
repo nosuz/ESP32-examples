@@ -10,6 +10,7 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "freertos/semphr.h"
 #include "esp_wifi.h"
 // #include "esp_wpa2.h"
 #include "esp_event.h"
@@ -48,6 +49,8 @@ static bool initialized_wifi = false;
 static bool started_wifi = false;
 static bool wps_in_progress = false;
 
+static SemaphoreHandle_t restart_semaphore = NULL;
+
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
@@ -76,7 +79,12 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         if (wifi_stop_flag)
         {
             // skip retry connect if esp_wifi_stop is issued.
-            ESP_LOGI(TAG, "stop wifi in progress");
+            ESP_LOGI(TAG, "Stop wifi in progress. Give up reconnection.");
+        }
+        else if (wps_in_progress)
+        {
+            // skip retry connect while WPS in progress
+            ESP_LOGI(TAG, "WPS in progress. Give up reconnection.");
         }
         else if (s_retry_num < ESP_MAXIMUM_RETRY)
         {
@@ -207,6 +215,8 @@ int wifi_init(void)
     // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_START, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
 
+    restart_semaphore = xSemaphoreCreateBinary();
+
     initialized_wifi = true;
     ESP_LOGI(TAG, "wifi_init finished.");
 
@@ -236,14 +246,18 @@ void wifi_wps_start(void)
     {
         wifi_connect();
     }
+    wps_in_progress = true;
     esp_wifi_disconnect();
+
+    xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
+    xSemaphoreGive(restart_semaphore);
 
     ESP_LOGI(TAG, "WPS start");
     start_blink();
     ESP_ERROR_CHECK(esp_wifi_wps_disable());
     ESP_ERROR_CHECK(esp_wifi_wps_enable(&wps_config));
     ESP_ERROR_CHECK(esp_wifi_wps_start(0));
-    wps_in_progress = true;
 }
 
 int wifi_wait_connection(void)
@@ -270,6 +284,13 @@ int wifi_wait_connection(void)
     }
 
     return connected;
+}
+
+void wifi_wait_restart(void)
+{
+    ESP_LOGI(TAG, "Waiting restart ...");
+    xSemaphoreTake(restart_semaphore, portMAX_DELAY);
+    ESP_LOGI(TAG, "Requested restart.");
 }
 
 void wifi_disconnect(void)

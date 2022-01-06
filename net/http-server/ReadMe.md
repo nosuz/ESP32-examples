@@ -21,6 +21,24 @@ $ curl -v 'http://esp32.local/api/led_on'
 $ curl -v 'http://esp32.local/api/led_off'
 ```
 
+## WPS
+
+Long pressing button make LED blink and get this device into WPS mode.
+
+Note: Before pressing the button, Start WPS mode on AP. Or you need to wait around 2 min.
+
+## Button
+
+Long press makes WPS starts. When WPS starts the LED begin to blink.
+
+Short press toggles LED status.
+
+## Web App
+
+Follow www/ReadMe.md
+
+If clients accept gzip encoding, the HTTP server returns gziped files.
+
 ## SPIFFS Filesystem
 
 - Specify flash memory size and the partition table file through `idf.py menuconfig`.
@@ -46,15 +64,3 @@ W (9885) httpd_txrx: httpd_resp_send_err: 431 Request Header Fields Too Large - 
 ```
 
 Chnage ESP32 configuration by `idf.py menuconfig`. The configuration filed is in `Component config > HTTP Server > Max HTTP Request Header Length change 512 to 1024.`.
-
-## Web App
-
-Follow www/ReadMe.md
-
-If clients accept gzip encoding, the HTTP server returns gziped files.
-
-## Button
-
-Long press makes WPS starts. When WPS starts the LED begin to blink.
-
-Short press toggles LED status.

@@ -14,6 +14,8 @@ static const char *TAG = "server_main";
 
 void app_main(void)
 {
+    httpd_handle_t server;
+
     nvs_init();
     config_gpio();
 
@@ -30,18 +32,33 @@ void app_main(void)
 
     ESP_ERROR_CHECK(init_spiffs());
 
-    ESP_LOGI(TAG, "Wait connection");
-    if (wifi_wait_connection())
+    do
     {
-        ESP_LOGI(TAG, "mDNS service start");
-        start_mdns_service();
+        ESP_LOGI(TAG, "Wait connection");
+        if (wifi_wait_connection())
+        {
+            ESP_LOGI(TAG, "Start mDNS service");
+            start_mdns_service();
 
-        ESP_LOGI(TAG, "HTTP server start");
-        start_webserver();
-    }
+            ESP_LOGI(TAG, "Start HTTP server");
+            server = start_webserver();
 
-    while (1)
-    {
-        vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
-    }
+            // wait until restart
+            wifi_wait_restart();
+
+            if (server)
+            {
+                ESP_LOGI(TAG, "Stop HTTP server");
+                stop_webserver(server);
+            }
+            ESP_LOGI(TAG, "Stop mDNS service");
+            stop_mdns_service();
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to make connection");
+            vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
+        }
+
+    } while (1);
 }
