@@ -76,7 +76,12 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         if (wifi_stop_flag)
         {
             // skip retry connect if esp_wifi_stop is issued.
-            ESP_LOGI(TAG, "stop wifi in progress");
+            ESP_LOGI(TAG, "Stop wifi in progress. Give up reconnection.");
+        }
+        if (wps_in_progress)
+        {
+            // skip retry connect while WPS in progress
+            ESP_LOGI(TAG, "WPS in progress. Give up reconnection.");
         }
         else if (s_retry_num < ESP_MAXIMUM_RETRY)
         {
@@ -236,6 +241,7 @@ void wifi_wps_start(void)
     {
         wifi_connect();
     }
+    wps_in_progress = true;
     esp_wifi_disconnect();
 
     ESP_LOGI(TAG, "WPS start");
@@ -243,7 +249,6 @@ void wifi_wps_start(void)
     ESP_ERROR_CHECK(esp_wifi_wps_disable());
     ESP_ERROR_CHECK(esp_wifi_wps_enable(&wps_config));
     ESP_ERROR_CHECK(esp_wifi_wps_start(0));
-    wps_in_progress = true;
 }
 
 int wifi_wait_connection(void)
