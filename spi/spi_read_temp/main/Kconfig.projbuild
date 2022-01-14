@@ -1,0 +1,27 @@
+menu "SPI Example Configuration"
+
+    config SPI_CLK
+        int "CLK GPIO Num"
+        default 23
+        help
+            GPIO number for SPI clock line.
+
+    config SPI_MOSI
+        int "MOSI GPIO Num"
+        default 22
+        help
+            GPIO number for SPI MOSI line.
+
+    config SPI_MISO
+        int "MISO GPIO Num"
+        default 21
+        help
+            GPIO number for SPI MISO line.
+
+    config SPI_CS
+        int "CS GPIO Num"
+        default 19
+        help
+            GPIO number for SPI CS line.
+
+endmenu
