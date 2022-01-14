@@ -78,7 +78,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             // skip retry connect if esp_wifi_stop is issued.
             ESP_LOGI(TAG, "Stop wifi in progress. Give up reconnection.");
         }
-        if (wps_in_progress)
+        else if (wps_in_progress)
         {
             // skip retry connect while WPS in progress
             ESP_LOGI(TAG, "WPS in progress. Give up reconnection.");
