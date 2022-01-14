@@ -1,0 +1,69 @@
+menu "MQTT Configuration"
+
+    config BROKER_URL
+        string "Broker URL"
+        default "mqtt://test.mosquitto.org:1883/"
+        help
+            URL of a MQTT broker.
+
+    config SPI_CLK
+        int "CLK GPIO Num"
+        default 23
+        help
+            GPIO number for SPI clock line.
+
+    config SPI_MOSI
+        int "MOSI GPIO Num"
+        default 22
+        help
+            GPIO number for SPI MOSI line.
+
+    config SPI_MISO
+        int "MISO GPIO Num"
+        default 21
+        help
+            GPIO number for SPI MISO line.
+
+    config SPI_CS
+        int "CS GPIO Num"
+        default 19
+        help
+            GPIO number for SPI CS line.
+
+    config TRIGER_PIN
+        int "WPS triger GPIO"
+        range 0 39 if IDF_TARGET_ESP32
+        range 0 21 if IDF_TARGET_ESP32C3
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set triger GPIO number (IOxx) to start WPS.
+
+    config TRIGER_DURATION
+        int "Pressed duration to get into WPS mode."
+        range 2 5
+        default 2
+        help
+            Set a lengh to get into WPS mode.
+
+
+    config LED_PIN
+        int "GPIO connected to LED"
+        range 0 39 if IDF_TARGET_ESP32
+        range 0 21 if IDF_TARGET_ESP32C3
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set GPIO number (IOxx) for LED.
+
+    config ESP_MAXIMUM_RETRY
+        int "Maximum retry"
+        default 3
+        help
+            Set the Maximum retry to try reconnecting to the AP.
+
+    config FORCE_ERASE_NVS
+        bool "Erase NVS on every boot"
+        default false
+
+endmenu
