@@ -1,16 +1,12 @@
-/* This code is from ESP-IDF example.
-
-   This code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_sleep.h"
+#include "cJSON.h"
 
 #include "gpio.h"
 #include "nvs.h"
@@ -18,12 +14,18 @@
 #include "spi.h"
 #include "ADT7310.h"
 #include "mqtt.h"
+#include "sntp.h"
 
-#define SLEEP_SEC (60)
+#define SLEEP_SEC (10 * 60) // sleep 10 min.
 
 static const char *TAG = "wifi_main";
 
 RTC_DATA_ATTR static int boot_count = 0;
+RTC_DATA_ATTR static time_t last_synced = 0;
+
+time_t now;
+struct tm timeinfo;
+char strftime_buf[64];
 
 void app_main(void)
 {
@@ -33,14 +35,14 @@ void app_main(void)
     nvs_init();
     config_gpio();
 
+    // setenv("TZ", TIME_ZONE, 1);
+    setenv("TZ", "JST-9", 1);
+    tzset();
+    init_sntp();
+
     // Setup SPI and device.
     init_spi();
     attach_adt7310();
-    if (boot_count == 0)
-    {
-        // wait filling current temp into registor.
-        vTaskDelay(pdMS_TO_TICKS(1000)); // wait 1 sec.
-    }
 
     if (wifi_init())
     {
@@ -57,14 +59,42 @@ void app_main(void)
     if (wifi_wait_connection())
     {
         ESP_LOGI(TAG, "Connected AP");
+
+        // Get systemtime into `now` and set local time in `timeinfo`
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        if (((now - last_synced) > (3600 * 2)) || (timeinfo.tm_year < (2016 - 1900)))
+        {
+            ESP_LOGW(TAG, "Update systemtime.");
+            start_sntp();
+            time(&now);
+            last_synced = now;
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Skip updating systemtime.");
+        }
+
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
+
         init_mqtt();
 
         vTaskDelay(pdMS_TO_TICKS(500)); // need to wait 1 sec.
         float temp = adt7310_read_temp();
         printf("Temp: %.1fC\n", temp);
-        char buf[7];
-        snprintf(buf, 7, "%.01f", temp);
-        mqtt_publish("esp32/spi", buf, 0, 0);
+
+        cJSON *root = cJSON_CreateObject();
+        strftime(strftime_buf, sizeof(strftime_buf), "%FT%T", &timeinfo);
+        cJSON_AddStringToObject(root, "time", strftime_buf);
+        cJSON_AddNumberToObject(root, "boot", boot_count);
+        cJSON_AddNumberToObject(root, "temp", temp);
+
+        // char *json = cJSON_Print(root);
+        char *json = cJSON_PrintUnformatted(root);
+        mqtt_publish("esp32/spi", json, 0, 0);
+        cJSON_Delete(root);
     }
     else
     {

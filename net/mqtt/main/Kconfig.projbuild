@@ -30,6 +30,18 @@ menu "MQTT Configuration"
         help
             GPIO number for SPI CS line.
 
+    config TIME_ZONE
+        string "Time Zone"
+        default "JST-9"
+        help
+            Set a local time zone.
+
+    config SNTP_SERVER
+        string "SNTP Server Name"
+        default ntp.nict.jp
+        help
+            Set an upstream server name.
+
     config TRIGER_PIN
         int "WPS triger GPIO"
         range 0 39 if IDF_TARGET_ESP32
