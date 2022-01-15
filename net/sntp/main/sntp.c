@@ -1,15 +1,19 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_sntp.h"
+#include "freertos/semphr.h"
 
 #define SNTP_SERVER CONFIG_SNTP_SERVER
 #define SNTP_INTERVAL (CONFIG_SNTP_INTERVAL * 1000)
 
 static const char *TAG = "sntp";
 
+static SemaphoreHandle_t sntp_semaphore = NULL;
+
 void time_synced_callback(struct timeval *tv)
 {
-    ESP_LOGI(TAG, "Time Synced Event");
+    ESP_LOGI(TAG, "Time Synced");
+    xSemaphoreGive(sntp_semaphore);
 }
 
 void init_sntp(void)
@@ -26,7 +30,9 @@ void init_sntp(void)
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, SNTP_SERVER);
     sntp_set_time_sync_notification_cb(time_synced_callback);
-    sntp_set_sync_interval(SNTP_INTERVAL); // default once per hour.
+    // sntp_set_sync_interval(SNTP_INTERVAL); // default once per hour.
+
+    sntp_semaphore = xSemaphoreCreateBinary();
 }
 
 void stop_sntp(void)
@@ -41,15 +47,11 @@ void start_sntp(void)
     sntp_init();
 
     // wait for time to be set
-    int retry = 0;
-    const int retry_count = 10;
-    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count)
+    ESP_LOGI(TAG, "Waiting for system time to be set");
+    if (xSemaphoreTake(sntp_semaphore, pdMS_TO_TICKS(20 * 1000)) != pdTRUE)
     {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        ESP_LOGE(TAG, "Failed to set systemtime");
     }
 
-#ifdef CONFIG_SNTP_ONESHOT
     stop_sntp();
-#endif
 }
