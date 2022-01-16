@@ -29,6 +29,8 @@ char strftime_buf[64];
 
 void app_main(void)
 {
+    float temp;
+
     ++boot_count;
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
 
@@ -43,6 +45,9 @@ void app_main(void)
     // Setup SPI and device.
     init_spi();
     attach_adt7310();
+
+    temp = adt7310_read_temp();
+    printf("Temp: %.1fC\n", temp);
 
     if (wifi_init())
     {
@@ -80,10 +85,6 @@ void app_main(void)
         ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
 
         init_mqtt();
-
-        vTaskDelay(pdMS_TO_TICKS(500)); // need to wait 1 sec.
-        float temp = adt7310_read_temp();
-        printf("Temp: %.1fC\n", temp);
 
         cJSON *root = cJSON_CreateObject();
         strftime(strftime_buf, sizeof(strftime_buf), "%FT%T", &timeinfo);
