@@ -5,6 +5,7 @@
 #include "esp_log.h"
 
 #define READ_ADDR(addr) ((1 << 6) | (addr << 3))
+#define WRITE_ADDR(addr) (addr << 3)
 
 static const char *TAG = "adt7310";
 
@@ -36,7 +37,7 @@ void attach_adt7310(void)
         .address_bits = 0,
         .dummy_bits = 0,
         .mode = 3,
-        .clock_speed_hz = 1000,
+        .clock_speed_hz = 500 * 1000,
         .queue_size = 1,
         .spics_io_num = CONFIG_SPI_CS,
         .pre_cb = NULL,
@@ -52,6 +53,25 @@ void attach_adt7310(void)
     {
         ESP_LOGE(TAG, "Failed to attach device");
     }
+}
+
+uint8_t adt7310_read_status(void)
+{
+    uint8_t value;
+    spi_transaction_t t = {
+        .cmd = READ_ADDR(0x0),
+        .length = 8, // data length
+        .tx_buffer = NULL,
+        .rx_buffer = &value,
+    };
+    ESP_LOGD(TAG, "Read Status from ADT7310");
+    esp_err_t err = spi_device_polling_transmit(dev_handle, &t);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to read status");
+    }
+
+    return value;
 }
 
 uint8_t adt7310_read_config(void)
@@ -71,6 +91,22 @@ uint8_t adt7310_read_config(void)
     }
 
     return value;
+}
+
+void adt7310_write_config(uint8_t command)
+{
+    spi_transaction_t t = {
+        .cmd = WRITE_ADDR(0x1),
+        .length = 8, // data length
+        .tx_buffer = &command,
+        .rx_buffer = NULL,
+    };
+    ESP_LOGD(TAG, "Write Config from ADT7310");
+    esp_err_t err = spi_device_polling_transmit(dev_handle, &t);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to write config");
+    }
 }
 
 uint8_t adt7310_read_id(void)
@@ -98,6 +134,20 @@ float adt7310_read_temp(void)
     float temp;
     uint8_t data[2];
     uint16_t value;
+
+    adt7310_write_config(0x20);
+    vTaskDelay(pdMS_TO_TICKS(240));
+    int retry = 0;
+    while (adt7310_read_status() & 0x80)
+    {
+        retry++;
+        if (retry > 10)
+        {
+            ESP_LOGE(TAG, "Give up waiting convertion");
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
 
     spi_transaction_t t = {
         .cmd = READ_ADDR(0x2),
