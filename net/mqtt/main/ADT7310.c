@@ -139,6 +139,9 @@ float adt7310_read_temp(void)
     uint16_t value;
     int max_retry = 10;
 
+    // set to cont. mode to wakeup from shutdown mode.
+    adt7310_write_config(0x00);
+    // set to one-shot mode.
     adt7310_write_config(0x20);
     vTaskDelay(pdMS_TO_TICKS(240));
     while (adt7310_read_status() & 0x80)
