@@ -27,7 +27,10 @@ void adt7310_reset(void)
         ESP_LOGE(TAG, "Failed to reset bus");
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1) + 1); // wait at least 1 msec.
+    // wait for over 500 us.
+    // System tick length will change. If the tick resolution is less than 1 ms., wait 2 ms.
+    // Or wait 2 ticks. 1 tick might wait until the next tick, or less than 1 tick duration.
+    vTaskDelay(pdMS_TO_TICKS(2) + 2);
 }
 
 void attach_adt7310(void)
