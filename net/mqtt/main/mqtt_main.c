@@ -93,15 +93,18 @@ void app_main(void)
         cJSON_AddNumberToObject(root, "temp", temp);
 
         // char *json = cJSON_Print(root);
+        // printf(cJSON_Print(root));
         char *json = cJSON_PrintUnformatted(root);
         mqtt_publish("esp32/spi", json, 0, 0);
+
+        mqtt_stop();
         cJSON_Delete(root);
     }
     else
     {
         ESP_LOGW(TAG, "Failed to connect");
-        wifi_disconnect();
     }
+    wifi_disconnect();
 
     ESP_LOGI(TAG, "Entering deep sleep for %d sec.", SLEEP_SEC);
     esp_deep_sleep(1000000LL * SLEEP_SEC);

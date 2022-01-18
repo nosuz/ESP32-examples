@@ -56,11 +56,19 @@ void init_mqtt(void)
 
     client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    ESP_LOGI(TAG, "Start MQTT");
     esp_mqtt_client_start(client);
 }
 
 int mqtt_publish(char *topic, const char *data, int qos, int retain)
 {
+    ESP_LOGI(TAG, "Publish message");
     int msg_id = esp_mqtt_client_publish(client, topic, data, 0, qos, retain);
     return msg_id;
+}
+
+void mqtt_stop(void)
+{
+    ESP_LOGI(TAG, "Stop MQTT");
+    esp_mqtt_client_stop(client);
 }
