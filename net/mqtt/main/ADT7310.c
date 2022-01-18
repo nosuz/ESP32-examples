@@ -137,14 +137,14 @@ float adt7310_read_temp(void)
     float temp;
     uint8_t data[2];
     uint16_t value;
+    int max_retry = 10;
 
     adt7310_write_config(0x20);
     vTaskDelay(pdMS_TO_TICKS(240));
-    int retry = 0;
     while (adt7310_read_status() & 0x80)
     {
-        retry++;
-        if (retry > 10)
+        max_retry--;
+        if (max_retry == 0)
         {
             ESP_LOGE(TAG, "Give up waiting convertion");
             break;
