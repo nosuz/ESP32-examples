@@ -12,7 +12,7 @@
 #include "nvs.h"
 #include "wifi.h"
 #include "spi.h"
-#include "ADT7310.h"
+#include "adt7310.h"
 #include "mqtt.h"
 #include "sntp.h"
 
