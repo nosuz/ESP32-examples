@@ -5,7 +5,7 @@
 #include "esp_sleep.h"
 #include "freertos/task.h"
 
-#if IDF_TARGET == esp32c3
+#if CONFIG_IDF_TARGET_ESP32C3
 #include "driver/temp_sensor.h"
 #endif
 
@@ -97,7 +97,7 @@ void app_main(void)
     ESP_LOGI(TAG, "I2C initialized successfully");
     aqm0802a_init(I2C_MASTER_NUM);
 
-#if IDF_TARGET == esp32c3
+#if CONFIG_IDF_TARGET_ESP32C3
     temp_sensor_config_t internal_temp_sensor = {
         .dac_offset = TSENS_DAC_L2,
         .clk_div = 6,
@@ -117,7 +117,7 @@ void app_main(void)
         sprintf(temp_str, "Te=%.1fC", cur_tmp);
         aqm0802a_print(I2C_MASTER_NUM, temp_str);
 
-#if IDF_TARGET == esp32c3
+#if CONFIG_IDF_TARGET_ESP32C3
         float tsens_out;
         temp_sensor_read_celsius(&tsens_out);
         ESP_LOGI(TAG, "Inner Temp.: %.1f", tsens_out);
