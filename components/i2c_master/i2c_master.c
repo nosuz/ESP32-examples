@@ -10,7 +10,6 @@ esp_err_t init_i2c_master(void)
         .mode = I2C_MODE_MASTER,
         .sda_io_num = CONFIG_I2C_MASTER_SDA,
         .scl_io_num = CONFIG_I2C_MASTER_SCL,
-        .sda_pullup_en = CONFIG_I2C_PULLUP,
 #ifdef CONFIG_I2C_PULLUP
         .scl_pullup_en = true,
 #else
