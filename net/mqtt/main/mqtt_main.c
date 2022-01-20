@@ -15,6 +15,7 @@
 #include "adt7310.h"
 #include "mqtt.h"
 #include "sntp.h"
+#include "adt7410.h"
 
 #define SLEEP_SEC (10 * 60) // sleep 10 min.
 
@@ -29,7 +30,7 @@ char strftime_buf[64];
 
 void app_main(void)
 {
-    float temp;
+    float temp_spi, temp_i2c;
 
     ++boot_count;
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
@@ -46,8 +47,14 @@ void app_main(void)
     init_spi();
     attach_adt7310();
 
-    temp = adt7310_read_temp();
-    printf("Temp: %.1fC\n", temp);
+    // Setup I2C and device.
+    ESP_ERROR_CHECK(init_i2c_master());
+
+    temp_spi = adt7310_read_temp();
+    printf("Temp SPI: %.1fC\n", temp_spi);
+
+    temp_i2c = adt7410_read_temp();
+    printf("Temp I2C: %.1fC\n", temp_i2c);
 
     if (wifi_init())
     {
@@ -90,12 +97,13 @@ void app_main(void)
         strftime(strftime_buf, sizeof(strftime_buf), "%FT%T", &timeinfo);
         cJSON_AddStringToObject(root, "time", strftime_buf);
         cJSON_AddNumberToObject(root, "boot", boot_count);
-        cJSON_AddNumberToObject(root, "temp", temp);
+        cJSON_AddNumberToObject(root, "temp_spi", temp_spi);
+        cJSON_AddNumberToObject(root, "temp_i2c", temp_i2c);
 
         // char *json = cJSON_Print(root);
         // printf(cJSON_Print(root));
         char *json = cJSON_PrintUnformatted(root);
-        mqtt_publish("esp32/spi", json, 0, 0);
+        mqtt_publish("esp32/temp", json, 0, 0);
 
         mqtt_stop();
         cJSON_Delete(root);
