@@ -85,6 +85,14 @@ idf.py -p /dev/ttyUSB0 erase-flash
 idf.py create-project --path project_dir project_name
 ```
 
+## 新しいコンポーネット
+
+新しいコンポーネットの雛形も`idf.py`コマンドで作成できる。
+
+```
+idf.py create-component -C project_dir component_name
+```
+
 ## eFuse の確認
 
 ```
