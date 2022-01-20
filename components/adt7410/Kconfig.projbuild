@@ -1,0 +1,20 @@
+menu "ADT7410 Configuration"
+
+    choice
+        prompt "Address of ADT7410"
+
+        config ADT7410_AT_0x48
+            bool "0x48"
+
+        config ADT7410_AT_0x49
+            bool "0x49"
+
+        config ADT7410_AT_0x4A
+            bool "0x4A"
+
+        config ADT7410_AT_0x4B
+            bool "0x4B"
+
+    endchoice
+
+endmenu
