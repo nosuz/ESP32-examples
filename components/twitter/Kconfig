@@ -1,0 +1,27 @@
+menu "Twitter OAuth Configuration"
+
+    config CONSUMER_TOKEN
+        string "Consumer Token"
+        default "xvz1evFS4wEEPTGEFPHBog"
+        help
+            Set consumer token.
+
+    config CONSUMER_SECRET
+        string "Consumer Secret"
+        default "kAcSOqF21Fu85e7zjz7ZN2U4ZRhfV3WpwPAoE3Z7kBw"
+        help
+            Set consumer secret.
+
+    config OAUTH_TOKEN
+        string "OAuth Token"
+        default "370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb"
+        help
+            Set OAuth token.
+
+    config OAUTH_SECRET
+        string "OAuth Token Secret"
+        default "LswwdoUaIvS8ltyTt5jkRh4J50vUPVVHtR2YPi5kE"
+        help
+            Set OAuth token secret.
+
+endmenu
