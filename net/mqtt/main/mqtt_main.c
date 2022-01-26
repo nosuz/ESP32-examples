@@ -15,7 +15,7 @@
 #include "adt7310.h"
 #include "mqtt.h"
 #include "sntp.h"
-#include "adt7410.h"
+#include "ns_adt7410.h"
 
 #define SLEEP_SEC (10 * 60) // sleep 10 min.
 

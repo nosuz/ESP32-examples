@@ -2,7 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "adt7410.h"
+#include "ns_adt7410.h"
 
 #define ACK_EN 1
 

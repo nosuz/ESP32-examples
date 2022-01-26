@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "adt7410.c"
+    SRCS "ns_adt7410.c"
     INCLUDE_DIRS "include"
-    REQUIRES i2c_master
+    REQUIRES ns_i2c_master
 )

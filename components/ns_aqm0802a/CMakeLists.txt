@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "aqm0802a.c"
+    SRCS "ns_aqm0802a.c"
     INCLUDE_DIRS "include"
-    REQUIRES i2c_master
+    REQUIRES ns_i2c_master
 )

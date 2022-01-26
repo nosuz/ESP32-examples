@@ -9,8 +9,8 @@
 #include "driver/temp_sensor.h"
 #endif
 
-#include "adt7410.h"
-#include "aqm0802a.h"
+#include "ns_adt7410.h"
+#include "ns_aqm0802a.h"
 
 static const char *TAG = "i2c-read-sensor";
 

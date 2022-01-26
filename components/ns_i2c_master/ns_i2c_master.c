@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "i2c_master.h"
+#include "ns_i2c_master.h"
 
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_MASTER_RX_BUF_DISABLE 0
