@@ -1,20 +1,12 @@
-/* This code is from ESP-IDF example.
-
-   This code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 
 #include "ns_wifi.h"
-#include "http_get.h"
+#include "ns_http.h"
 
-static const char *TAG = "wifi_main";
+static const char *TAG = "main";
 
 void app_main(void)
 {
@@ -37,21 +29,20 @@ void app_main(void)
         ESP_LOGI(TAG, "Wait connection");
         if (wifi_wait_connection())
         {
-            run_http_get();
-            vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
-            wifi_disconnect();
-            ESP_LOGI(TAG, "Disconnected");
-
-            vTaskDelay(10 * 1000 / portTICK_PERIOD_MS);
-            wifi_connect();
-            ESP_LOGI(TAG, "Disconnected");
+            ns_http_get("https://www.yahoo.co.jp");
+            vTaskDelay(1 * 1000 / portTICK_PERIOD_MS);
+            ns_http_get("https://www.google.com/");
         }
         else
         {
             ESP_LOGW(TAG, "Failed to connect");
-            wifi_disconnect();
-            vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
-            wifi_connect();
         }
+
+        wifi_disconnect();
+    }
+
+    while (1)
+    {
+        vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
     }
 }
