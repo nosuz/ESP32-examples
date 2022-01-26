@@ -1,0 +1,28 @@
+menu "SNTP Configuration"
+
+    config TIME_ZONE
+        string "Time Zone"
+        default "JST-9"
+        help
+            Set a local time zone.
+
+    config SNTP_SERVER
+        string "SNTP Server Name"
+        default ntp.nict.jp
+        help
+            Set an upstream server name.
+
+    config SNTP_ONESHOT
+        bool "Stop SNTP when synced"
+        default true
+        help
+            Set Keep sysncing or one shot.
+            If you keep SNTP running, stop SNTP before disconnecting from network.
+
+    config SNTP_INTERVAL
+        int "Sync interval"
+        default 3600
+        help
+            Set syncing interval
+
+endmenu

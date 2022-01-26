@@ -3,7 +3,8 @@
 #include "esp_sntp.h"
 #include "freertos/semphr.h"
 
-#define SNTP_SERVER CONFIG_SNTP_SERVER
+#include "ns_sntp.h"
+
 #define SNTP_INTERVAL (CONFIG_SNTP_INTERVAL * 1000)
 
 static const char *TAG = "sntp";
@@ -27,8 +28,12 @@ void init_sntp(void)
 #endif
 
     ESP_LOGI(TAG, "Init SNTP");
+    setenv("TZ", CONFIG_TIME_ZONE, 1);
+    // setenv("TZ", "JST-9", 1);
+    tzset();
+
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, SNTP_SERVER);
+    sntp_setservername(0, CONFIG_SNTP_SERVER);
     sntp_set_time_sync_notification_cb(time_synced_callback);
     // sntp_set_sync_interval(SNTP_INTERVAL); // default once per hour.
 

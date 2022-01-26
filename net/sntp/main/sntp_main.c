@@ -11,9 +11,8 @@
 #include "gpio.h"
 #include "nvs.h"
 #include "wifi.h"
-#include "sntp.h"
 
-#define TIME_ZONE CONFIG_TIME_ZONE
+#include "ns_sntp.h"
 
 static const char *TAG = "sntp_main";
 
@@ -33,9 +32,6 @@ void app_main(void)
     nvs_init();
     config_gpio();
 
-    // setenv("TZ", TIME_ZONE, 1);
-    setenv("TZ", "JST-9", 1);
-    tzset();
     init_sntp();
 
     if (wifi_init())
