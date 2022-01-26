@@ -7,18 +7,29 @@
 // https://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <regex.h>
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
 
-#include "mbedtls/md.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_event.h"
 #include "esp_log.h"
+
+#include "mbedtls/md.h"
+#include "esp_tls.h"
+#include "esp_crt_bundle.h"
+
+#include "esp_http_client.h"
 
 #define MAX_PARAMS 16
 #define MAX_KEY_LENGTH 31
 #define MAX_VALUE_LENGTH 511
+
+#define BUFFER_BLOCK_SIZE (1024)
 
 // #define DEBUG
 
@@ -45,8 +56,7 @@ char *base64_encode(unsigned char *data,
 {
 
     uint16_t output_length = 4 * ((input_length + 2) / 3);
-
-    char *encoded_data = malloc(output_length + 1);
+    char *encoded_data = malloc(sizeof(char) * (output_length + 1));
     if (encoded_data == NULL)
         return NULL;
 
@@ -66,45 +76,125 @@ char *base64_encode(unsigned char *data,
 
     for (int i = 0; i < mod_table[input_length % 3]; i++)
         encoded_data[output_length - 1 - i] = '=';
-    encoded_data[output_length] = 0;
+    encoded_data[output_length] = '\0';
 
     return encoded_data;
 }
 
+char tohex(uint8_t c)
+{
+    return c > 9 ? 'A' + (c - 10) : '0' + c;
+}
+
 char *percent_encode(char *param)
 {
-    uint16_t len = strlen(param);
+    uint16_t param_length = strlen(param);
     char c;
 
     for (int i = 0; i < strlen(param); i++)
     {
         c = param[i];
         if (!isalnum(c) && c != '-' && c != '.' && c != '_' && c != '~')
-            len += 2;
+            param_length += 2;
     }
 
-    char *encoded = malloc(len + 1);
-    encoded[len] = 0;
+    char *encoded = malloc(sizeof(char) * (param_length + 1));
 
-    len = 0;
-    for (int i = 0; i < strlen(param); i++)
+    uint16_t length = 0;
+    for (int i = 0; i < param_length; i++)
     {
         c = param[i];
         if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~')
         {
-            encoded[len] = c;
+            encoded[length++] = c;
         }
         else
         {
-            encoded[len] = '%';
-            sprintf(&encoded[len + 1], "%X", (c >> 4));
-            sprintf(&encoded[len + 2], "%X", (c & 0x0F));
-            len += 2;
+            encoded[length++] = '%';
+            encoded[length++] = tohex(c >> 4);
+            encoded[length++] = tohex(c & 0x0F);
         }
-        len++;
     }
+    encoded[length] = '\0';
 
     return encoded;
+}
+
+typedef struct content_struct
+{
+    int64_t size;
+    char *body;
+} content_struct;
+
+esp_err_t
+http_event_handler(esp_http_client_event_t *evt)
+{
+    switch (evt->event_id)
+    {
+    case HTTP_EVENT_ERROR:
+        ESP_LOGI(TAG, "HTTP_EVENT_ERROR");
+        break;
+    case HTTP_EVENT_ON_CONNECTED:
+        ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
+        break;
+    case HTTP_EVENT_HEADER_SENT:
+        ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
+        break;
+    case HTTP_EVENT_ON_HEADER:
+        // ESP_LOGI(
+        //     TAG,
+        //     "HTTP_EVENT_ON_HEADER, key=%s, value=%s",
+        //     evt->header_key,
+        //     evt->header_value);
+        break;
+    case HTTP_EVENT_ON_DATA:
+        // Can handle both pages having Content-Length and chunked pages.
+        // ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+        if (evt->user_data == NULL)
+            break;
+        content_struct *content = evt->user_data;
+        int64_t new_content_size = content->size + evt->data_len;
+        if (content->body != NULL)
+        {
+            // check the allocated memory size and expand it if needed.
+            int cur_block_size = (content->size + 1) / BUFFER_BLOCK_SIZE + 1;
+            int new_block_size = (new_content_size + 1) / BUFFER_BLOCK_SIZE + 1;
+            if (cur_block_size < new_block_size)
+            {
+                char *tmp = (char *)realloc(content->body, new_block_size * BUFFER_BLOCK_SIZE);
+                if (tmp != NULL)
+                {
+                    // ESP_LOGI(TAG, "Expanded to %d blocks.", new_block_size);
+                    content->body = tmp;
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "Failed to realloc to %d blocks.", new_block_size);
+                    break;
+                }
+            }
+
+            memcpy(content->body + content->size, evt->data, evt->data_len);
+            content->body[new_content_size] = '\0';
+        }
+        content->size = new_content_size;
+
+        break;
+    case HTTP_EVENT_ON_FINISH:
+        ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
+        break;
+    case HTTP_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
+        int mbedtls_err = 0;
+        esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
+        if (err != 0)
+        {
+            ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
+            ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
+        }
+        break;
+    }
+    return ESP_OK;
 }
 
 void twitter_append_oauth(char *key, char *value)
@@ -221,21 +311,22 @@ void append_signature(char *_method, char *url)
     char *consumer_secret = percent_encode(CONFIG_CONSUMER_SECRET);
     char *oauth_secret = percent_encode(CONFIG_OAUTH_SECRET);
 
-    char *key = malloc(strlen(consumer_secret) + strlen(oauth_secret) + 1);
+    char *key = malloc(sizeof(char) * (strlen(consumer_secret) + strlen(oauth_secret) + 1));
     strcpy(key, consumer_secret);
     key[strlen(consumer_secret)] = '&';
     strcpy(key + strlen(consumer_secret) + 1, oauth_secret);
     free(consumer_secret);
     free(oauth_secret);
 
-    char *params = malloc(MAX_PARAMS * (MAX_KEY_LENGTH + MAX_VALUE_LENGTH + 2));
+    // too match memory is allocated
+    char *params = malloc(sizeof(char) * MAX_PARAMS * (MAX_KEY_LENGTH + MAX_VALUE_LENGTH + 2));
     concat_params(params);
     ESP_LOGI(TAG, "Params: %s", params);
 
     char *encoded_url = percent_encode(url);
     char *encoded_params = percent_encode(params);
     free(params);
-    char *sign_base = malloc(strlen(method) + 1 + strlen(encoded_url) + 1 + strlen(encoded_params) + 1);
+    char *sign_base = malloc(sizeof(char) * (strlen(method) + 1 + strlen(encoded_url) + 1 + strlen(encoded_params) + 1));
     strcpy(sign_base, method);
     strcat(sign_base, "&");
     strcat(sign_base, encoded_url);
@@ -272,7 +363,7 @@ void append_signature(char *_method, char *url)
     free(encode_signed_param);
 }
 
-void make_oauth_header(char *header, char *method, char *url)
+char *make_oauth_header(char *method, char *url)
 {
     for (int i = 0; i < param_index; i++)
     {
@@ -287,12 +378,69 @@ void make_oauth_header(char *header, char *method, char *url)
     regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE);
     int size = sizeof(patternMatch) / sizeof(regmatch_t);
 
-    header[0] = '\0';
-    strcat(header, "OAuth ");
+    char *oauth_header = malloc(sizeof(char) * (strlen("OAuth ") + 1));
+    strcpy(oauth_header, "OAuth ");
+
     bool first_item = true;
     for (int i = 0; i < param_index; i++)
     {
         if (regexec(&preg, dict_key[i], size, patternMatch, 0) == 0)
+        {
+            uint16_t new_length = strlen(oauth_header) + 1;
+            if (!first_item)
+                new_length += 1;                   // for ','
+            new_length += strlen(dict_key[i]) + 1; // key + '='
+            new_length += strlen(dict_value[i]);
+            void *realloced = realloc(oauth_header, sizeof(char) * new_length); // expand memory
+            if (realloced == NULL)
+            {
+                ESP_LOGE(TAG, "Failed realloc(oauth_header, %d): %s", new_length, dict_key[i]);
+            }
+            else
+            {
+                if (first_item)
+                {
+                    first_item = false;
+                }
+                else
+                {
+                    strcat(oauth_header, ",");
+                }
+                strcat(oauth_header, dict_key[i]);
+                strcat(oauth_header, "=\"");
+                strcat(oauth_header, dict_value[i]);
+                strcat(oauth_header, "\"");
+            }
+        }
+    }
+
+    regfree(&preg);
+    return oauth_header;
+}
+
+char *make_post_data(void)
+{
+    char *post_data = malloc(sizeof(char) * 1);
+    post_data[0] = '\0';
+
+    bool first_item = true;
+    for (int i = 0; i < param_index; i++)
+    {
+        if (!dict_param_flag[i])
+            continue;
+
+        uint16_t new_length = strlen(post_data) + 1;
+        if (!first_item)
+            new_length += 1;                   // for '&'
+        new_length += strlen(dict_key[i]) + 1; // key + '='
+        char *encoded_value = percent_encode(dict_value[i]);
+        new_length += strlen(encoded_value);
+        void *realloced = realloc(post_data, sizeof(char) * new_length); // expand memory
+        if (realloced == NULL)
+        {
+            ESP_LOGE(TAG, "Failed realloc(post_data, %d): %s", new_length, dict_key[i]);
+        }
+        else
         {
             if (first_item)
             {
@@ -300,42 +448,16 @@ void make_oauth_header(char *header, char *method, char *url)
             }
             else
             {
-                strcat(header, ",");
+                strcat(post_data, "&");
             }
-            strcat(header, dict_key[i]);
-            strcat(header, "=\"");
-            strcat(header, dict_value[i]);
-            strcat(header, "\"");
+            strcat(post_data, dict_key[i]);
+            strcat(post_data, "=");
+            strcat(post_data, encoded_value);
         }
-    }
-
-    regfree(&preg);
-}
-
-void make_post_data(char *post_data)
-{
-    post_data[0] = '\0';
-    bool first_item = true;
-
-    for (int i = 0; i < param_index; i++)
-    {
-        if (!dict_param_flag[i])
-            continue;
-
-        if (first_item)
-        {
-            first_item = false;
-        }
-        else
-        {
-            strcat(post_data, "&");
-        }
-        strcat(post_data, dict_key[i]);
-        strcat(post_data, "=");
-        char *encoded_value = percent_encode(dict_value[i]);
-        strcat(post_data, encoded_value);
         free(encoded_value);
     }
+
+    return post_data;
 }
 
 void twitter_update_status(void)
@@ -343,14 +465,45 @@ void twitter_update_status(void)
     const char *method = "post";
     const char *url = "https://api.twitter.com/1.1/statuses/update.json";
 
-    char *header = malloc(MAX_PARAMS * (MAX_KEY_LENGTH * 2 + MAX_VALUE_LENGTH));
-    make_oauth_header(header, method, url);
-    ESP_LOGI(TAG, "OAuth Header: %s", header);
+    char *oauth_header = make_oauth_header(method, url);
+    ESP_LOGI(TAG, "OAuth Header: %s", oauth_header);
 
-    char *post_data = malloc(MAX_PARAMS * (MAX_KEY_LENGTH * 2 + MAX_VALUE_LENGTH));
-    make_post_data(post_data);
+    char *post_data = make_post_data();
     ESP_LOGI(TAG, "Post data: %s", post_data);
 
-    free(header);
+    content_struct content = {
+        .size = 0,
+        .body = malloc(sizeof(char) * BUFFER_BLOCK_SIZE),
+    };
+
+    esp_http_client_config_t config = {
+        .url = url,
+        // .transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .event_handler = http_event_handler,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .user_data = &content,
+        .method = HTTP_METHOD_POST,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    esp_err_t err = esp_http_client_perform(client);
+
+    // POST
+    esp_http_client_set_header(client, "Authorization", oauth_header);
+    esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
+    esp_http_client_set_post_field(client, post_data, strlen(post_data));
+    err = esp_http_client_perform(client);
+    if (err == ESP_OK)
+    {
+        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
+                 esp_http_client_get_status_code(client),
+                 esp_http_client_get_content_length(client));
+    }
+    else
+    {
+        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
+    }
+
+    free(content.body);
+    free(oauth_header);
     free(post_data);
 }

@@ -1,4 +1,4 @@
-menu "Twitter OAuth Configuration"
+menu "Twitter Client Configuration"
 
     config CONSUMER_TOKEN
         string "Consumer Token"
