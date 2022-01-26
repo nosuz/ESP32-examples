@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "twitter.h"
+#include "ns_twitter.h"
 #include "esp_log.h"
 
 static const char *TAG = "twitter-client";

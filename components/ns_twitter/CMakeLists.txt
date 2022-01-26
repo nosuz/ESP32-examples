@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "twitter.c"
+    SRCS "ns_twitter.c"
     INCLUDE_DIRS "include"
     REQUIRES mbedtls
     )
