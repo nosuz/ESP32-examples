@@ -1,4 +1,4 @@
-#include "i2c_master.h"
+#include "ns_i2c_master.h"
 
 void aqm0802a_init();
 void aqm0802a_clear_display();

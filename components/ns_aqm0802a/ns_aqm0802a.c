@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "aqm0802a.h"
+#include "ns_aqm0802a.h"
 
 #define AQM0802A_ADDR 0x3E
 #define DISP_X_SIZE 8
