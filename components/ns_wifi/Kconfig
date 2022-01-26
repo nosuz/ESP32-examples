@@ -1,0 +1,39 @@
+menu "WiFi and WPS Configuration"
+
+    config TRIGER_PIN
+        int "WPS triger GPIO"
+        range 0 39 if IDF_TARGET_ESP32
+        range 0 21 if IDF_TARGET_ESP32C3
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set triger GPIO number (IOxx) to start WPS.
+
+    config TRIGER_DURATION
+        int "Pressed duration to get into WPS mode."
+        range 2 5
+        default 2
+        help
+            Set a lengh to get into WPS mode.
+
+
+    config LED_PIN
+        int "GPIO connected to LED"
+        range 0 39 if IDF_TARGET_ESP32
+        range 0 21 if IDF_TARGET_ESP32C3
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 0
+        help
+            Set GPIO number (IOxx) for LED.
+
+    config ESP_MAXIMUM_RETRY
+        int "Maximum retry"
+        default 3
+        help
+            Set the Maximum retry to try reconnecting to the AP.
+
+    config FORCE_ERASE_NVS
+        bool "Erase NVS on every boot"
+        default false
+
+endmenu
