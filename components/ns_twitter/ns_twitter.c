@@ -17,8 +17,8 @@
 #include "esp_log.h"
 
 #define MAX_PARAMS 16
-#define MAX_KEY_LENGTH 64
-#define MAX_VALUE_LENGTH 512
+#define MAX_KEY_LENGTH 31
+#define MAX_VALUE_LENGTH 511
 
 // #define DEBUG
 
