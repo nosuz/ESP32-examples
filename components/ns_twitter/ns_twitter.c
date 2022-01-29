@@ -97,14 +97,14 @@ char *percent_encode(char *param)
     for (int i = 0; i < strlen(param); i++)
     {
         c = param[i];
-        if (!isalnum(c) && c != '-' && c != '.' && c != '_' && c != '~')
+        if (!(isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~'))
             param_length += 2;
     }
 
     char *encoded = fake_malloc(sizeof(char) * (param_length + 1));
 
     uint16_t length = 0;
-    for (int i = 0; i < param_length; i++)
+    for (int i = 0; i < strlen(param); i++)
     {
         c = param[i];
         if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~')
@@ -152,7 +152,7 @@ http_event_handler(esp_http_client_event_t *evt)
         break;
     case HTTP_EVENT_ON_DATA:
         // Can handle both pages having Content-Length and chunked pages.
-        // ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+        ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         if (evt->user_data == NULL)
             break;
         content_struct *content = evt->user_data;
@@ -196,6 +196,8 @@ http_event_handler(esp_http_client_event_t *evt)
             ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
         }
         break;
+    default:
+        ESP_LOGI(TAG, "Unknown event id: %d", evt->event_id);
     }
     return ESP_OK;
 }
@@ -331,7 +333,7 @@ void append_signature(char *_method, char *url)
     char *consumer_secret = percent_encode(CONFIG_CONSUMER_SECRET);
     char *oauth_secret = percent_encode(CONFIG_OAUTH_SECRET);
 
-    char *key = fake_malloc(sizeof(char) * (strlen(consumer_secret) + strlen(oauth_secret) + 1));
+    char *key = fake_malloc(sizeof(char) * (strlen(consumer_secret) + 1 + strlen(oauth_secret) + 1));
     strcpy(key, consumer_secret);
     key[strlen(consumer_secret)] = '&';
     strcpy(key + strlen(consumer_secret) + 1, oauth_secret);
@@ -404,18 +406,22 @@ char *make_oauth_header(char *method, char *url)
     {
         if (regexec(&preg, dict_key[i], size, patternMatch, 0) == 0)
         {
+            char *encoded_value = percent_encode(dict_value[i]);
+
             uint16_t new_length = strlen(oauth_header) + 1;
             if (!first_item)
                 new_length += 1;                   // for ','
-            new_length += strlen(dict_key[i]) + 1; // key + '='
-            new_length += strlen(dict_value[i]);
-            void *realloced = realloc(oauth_header, sizeof(char) * new_length); // expand memory
+            new_length += strlen(dict_key[i]) + 2; // key + '="'
+            new_length += strlen(encoded_value);   // for percent encoded value
+            new_length += 1;                       // for '"'
+            char *realloced = fake_realloc(oauth_header, sizeof(char) * new_length);
             if (realloced == NULL)
             {
                 ESP_LOGE(TAG, "Failed realloc(oauth_header, %d): %s", new_length, dict_key[i]);
             }
             else
             {
+                oauth_header = realloced;
                 if (first_item)
                 {
                     first_item = false;
@@ -426,9 +432,10 @@ char *make_oauth_header(char *method, char *url)
                 }
                 strcat(oauth_header, dict_key[i]);
                 strcat(oauth_header, "=\"");
-                strcat(oauth_header, dict_value[i]);
+                strcat(oauth_header, encoded_value);
                 strcat(oauth_header, "\"");
             }
+            fake_free(encoded_value);
         }
     }
 
@@ -504,24 +511,25 @@ void twitter_update_status(void)
         .method = HTTP_METHOD_POST,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
 
     // POST
     esp_http_client_set_header(client, "Authorization", oauth_header);
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
-    err = esp_http_client_perform(client);
+    esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
     {
         ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
+        printf("%s\n", content.body);
     }
     else
     {
         ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
     }
 
+    esp_http_client_cleanup(client);
     free(content.body);
 
     fake_free(oauth_header);
