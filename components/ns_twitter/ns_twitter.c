@@ -25,6 +25,9 @@
 
 #include "esp_http_client.h"
 
+#include "ns_twitter.h"
+#include "ns_heap.h"
+
 #define MAX_PARAMS 16
 #define MAX_KEY_LENGTH 31
 #define MAX_VALUE_LENGTH 511
@@ -56,7 +59,7 @@ char *base64_encode(unsigned char *data,
 {
 
     uint16_t output_length = 4 * ((input_length + 2) / 3);
-    char *encoded_data = malloc(sizeof(char) * (output_length + 1));
+    char *encoded_data = fake_malloc(sizeof(char) * (output_length + 1));
     if (encoded_data == NULL)
         return NULL;
 
@@ -98,7 +101,7 @@ char *percent_encode(char *param)
             param_length += 2;
     }
 
-    char *encoded = malloc(sizeof(char) * (param_length + 1));
+    char *encoded = fake_malloc(sizeof(char) * (param_length + 1));
 
     uint16_t length = 0;
     for (int i = 0; i < param_length; i++)
@@ -243,7 +246,7 @@ void twitter_init_api_params(void)
 #else
     twitter_append_oauth("oauth_nonce", "kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg");
 #endif
-    free(encoded_nonce);
+    fake_free(encoded_nonce);
 
 #ifndef DEBUG
     twitter_append_oauth("oauth_timestamp", oauth_timestamp);
@@ -254,7 +257,7 @@ void twitter_init_api_params(void)
     twitter_append_oauth("oauth_version", "1.0");
 }
 
-void concat_params(char *params)
+char *concat_params(void)
 {
     char tmp[MAX_KEY_LENGTH > MAX_VALUE_LENGTH ? MAX_KEY_LENGTH : MAX_VALUE_LENGTH]; // use longer length
     bool tmp_flag;
@@ -285,17 +288,34 @@ void concat_params(char *params)
         }
     }
 
+    char *params = fake_malloc(sizeof(char));
     params[0] = '\0';
     for (int i = 0; i < param_index; i++)
     {
+        uint16_t new_length = strlen(params) + 1;
         if (i > 0)
-            strcat(params, "&");
-        strcat(params, dict_key[i]);
-        strcat(params, "=");
+            new_length += 1;
+        new_length += strlen(dict_key[i]);
         char *encoded_value = percent_encode(dict_value[i]);
-        strcat(params, encoded_value);
-        free(encoded_value);
+        new_length += 1;
+        new_length += strlen(encoded_value);
+
+        char *realloced = fake_realloc(params, new_length);
+        if (realloced != NULL)
+        {
+            params = realloced;
+            // printf("key: %s\n", dict_key[i]);
+            // printf("val: %s\n", encoded_value);
+            if (i > 0)
+                strcat(params, "&");
+            strcat(params, dict_key[i]);
+            strcat(params, "=");
+            strcat(params, encoded_value);
+        }
+        fake_free(encoded_value);
     }
+
+    return params;
 }
 
 void append_signature(char *_method, char *url)
@@ -311,29 +331,27 @@ void append_signature(char *_method, char *url)
     char *consumer_secret = percent_encode(CONFIG_CONSUMER_SECRET);
     char *oauth_secret = percent_encode(CONFIG_OAUTH_SECRET);
 
-    char *key = malloc(sizeof(char) * (strlen(consumer_secret) + strlen(oauth_secret) + 1));
+    char *key = fake_malloc(sizeof(char) * (strlen(consumer_secret) + strlen(oauth_secret) + 1));
     strcpy(key, consumer_secret);
     key[strlen(consumer_secret)] = '&';
     strcpy(key + strlen(consumer_secret) + 1, oauth_secret);
-    free(consumer_secret);
-    free(oauth_secret);
+    fake_free(consumer_secret);
+    fake_free(oauth_secret);
 
-    // too match memory is allocated
-    char *params = malloc(sizeof(char) * MAX_PARAMS * (MAX_KEY_LENGTH + MAX_VALUE_LENGTH + 2));
-    concat_params(params);
+    char *params = concat_params();
     ESP_LOGI(TAG, "Params: %s", params);
 
     char *encoded_url = percent_encode(url);
     char *encoded_params = percent_encode(params);
-    free(params);
-    char *sign_base = malloc(sizeof(char) * (strlen(method) + 1 + strlen(encoded_url) + 1 + strlen(encoded_params) + 1));
+    fake_free(params);
+    char *sign_base = fake_malloc(sizeof(char) * (strlen(method) + 1 + strlen(encoded_url) + 1 + strlen(encoded_params) + 1));
     strcpy(sign_base, method);
     strcat(sign_base, "&");
     strcat(sign_base, encoded_url);
-    free(encoded_url);
+    fake_free(encoded_url);
     strcat(sign_base, "&");
     strcat(sign_base, encoded_params);
-    free(encoded_params);
+    fake_free(encoded_params);
 
     ESP_LOGI(TAG, "key: %s", key);
     ESP_LOGI(TAG, "Sign base: %s", sign_base);
@@ -350,8 +368,8 @@ void append_signature(char *_method, char *url)
     mbedtls_md_hmac_update(&ctx, (const unsigned char *)sign_base, baseLength);
     mbedtls_md_hmac_finish(&ctx, hmac);
     mbedtls_md_free(&ctx);
-    free(key);
-    free(sign_base);
+    fake_free(key);
+    fake_free(sign_base);
 
     ESP_LOGI(TAG, "Dump signed param");
     ESP_LOG_BUFFER_HEXDUMP(TAG, hmac, 20, ESP_LOG_INFO);
@@ -360,7 +378,7 @@ void append_signature(char *_method, char *url)
     ESP_LOGI(TAG, "Base64 encoded: %s", encode_signed_param);
 
     twitter_append_oauth("oauth_signature", encode_signed_param);
-    free(encode_signed_param);
+    fake_free(encode_signed_param);
 }
 
 char *make_oauth_header(char *method, char *url)
@@ -378,7 +396,7 @@ char *make_oauth_header(char *method, char *url)
     regcomp(&preg, pattern, REG_EXTENDED | REG_NEWLINE);
     int size = sizeof(patternMatch) / sizeof(regmatch_t);
 
-    char *oauth_header = malloc(sizeof(char) * (strlen("OAuth ") + 1));
+    char *oauth_header = fake_malloc(sizeof(char) * (strlen("OAuth ") + 1));
     strcpy(oauth_header, "OAuth ");
 
     bool first_item = true;
@@ -420,7 +438,7 @@ char *make_oauth_header(char *method, char *url)
 
 char *make_post_data(void)
 {
-    char *post_data = malloc(sizeof(char) * 1);
+    char *post_data = fake_malloc(sizeof(char) * 1);
     post_data[0] = '\0';
 
     bool first_item = true;
@@ -435,13 +453,14 @@ char *make_post_data(void)
         new_length += strlen(dict_key[i]) + 1; // key + '='
         char *encoded_value = percent_encode(dict_value[i]);
         new_length += strlen(encoded_value);
-        void *realloced = realloc(post_data, sizeof(char) * new_length); // expand memory
+        char *realloced = fake_realloc(post_data, sizeof(char) * new_length); // expand memory
         if (realloced == NULL)
         {
             ESP_LOGE(TAG, "Failed realloc(post_data, %d): %s", new_length, dict_key[i]);
         }
         else
         {
+            post_data = realloced;
             if (first_item)
             {
                 first_item = false;
@@ -454,7 +473,7 @@ char *make_post_data(void)
             strcat(post_data, "=");
             strcat(post_data, encoded_value);
         }
-        free(encoded_value);
+        fake_free(encoded_value);
     }
 
     return post_data;
@@ -504,6 +523,8 @@ void twitter_update_status(void)
     }
 
     free(content.body);
-    free(oauth_header);
-    free(post_data);
+
+    fake_free(oauth_header);
+    fake_free(post_data);
+    init_fake_heap();
 }
