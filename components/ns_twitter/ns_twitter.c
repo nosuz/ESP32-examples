@@ -234,7 +234,7 @@ void twitter_init_api_params(void)
     {
         oauth_nonce[i] = rand() % 0x100;
     }
-    ESP_LOG_BUFFER_HEXDUMP(TAG, oauth_nonce, 32, ESP_LOG_INFO);
+    // ESP_LOG_BUFFER_HEXDUMP(TAG, oauth_nonce, 32, ESP_LOG_INFO);
 
     param_index = 0;
 
@@ -340,7 +340,7 @@ void append_signature(char *_method, char *url)
     free(oauth_secret);
 
     char *params = concat_params();
-    ESP_LOGI(TAG, "Params: %s", params);
+    // ESP_LOGI(TAG, "Params: %s", params);
 
     char *encoded_url = percent_encode(url);
     char *encoded_params = percent_encode(params);
@@ -354,8 +354,8 @@ void append_signature(char *_method, char *url)
     strcat(sign_base, encoded_params);
     free(encoded_params);
 
-    ESP_LOGI(TAG, "key: %s", key);
-    ESP_LOGI(TAG, "Sign base: %s", sign_base);
+    // ESP_LOGI(TAG, "key: %s", key);
+    // ESP_LOGI(TAG, "Sign base: %s", sign_base);
 
     uint8_t hmac[20];
     mbedtls_md_context_t ctx;
@@ -372,11 +372,11 @@ void append_signature(char *_method, char *url)
     free(key);
     free(sign_base);
 
-    ESP_LOGI(TAG, "Dump signed param");
-    ESP_LOG_BUFFER_HEXDUMP(TAG, hmac, 20, ESP_LOG_INFO);
+    // ESP_LOGI(TAG, "Dump signed param");
+    // ESP_LOG_BUFFER_HEXDUMP(TAG, hmac, 20, ESP_LOG_INFO);
 
     char *encode_signed_param = base64_encode(hmac, 20);
-    ESP_LOGI(TAG, "Base64 encoded: %s", encode_signed_param);
+    // ESP_LOGI(TAG, "Base64 encoded: %s", encode_signed_param);
 
     twitter_append_oauth("oauth_signature", encode_signed_param);
     free(encode_signed_param);
@@ -384,10 +384,10 @@ void append_signature(char *_method, char *url)
 
 char *make_oauth_header(char *method, char *url)
 {
-    for (int i = 0; i < param_index; i++)
-    {
-        ESP_LOGI(TAG, "params(%d): %s -> %s", i, dict_key[i], dict_value[i]);
-    }
+    // for (int i = 0; i < param_index; i++)
+    // {
+    //     ESP_LOGI(TAG, "params(%d): %s -> %s", i, dict_key[i], dict_value[i]);
+    // }
 
     append_signature(method, url);
 
@@ -491,10 +491,10 @@ void twitter_update_status(void)
     const char *url = "https://api.twitter.com/1.1/statuses/update.json";
 
     char *oauth_header = make_oauth_header(method, url);
-    ESP_LOGI(TAG, "OAuth Header: %s", oauth_header);
+    // ESP_LOGI(TAG, "OAuth Header: %s", oauth_header);
 
     char *post_data = make_post_data();
-    ESP_LOGI(TAG, "Post data: %s", post_data);
+    // ESP_LOGI(TAG, "Post data: %s", post_data);
 
     content_struct content = {
         .size = 0,
@@ -521,7 +521,7 @@ void twitter_update_status(void)
         ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
-        printf("%s\n", content.body);
+        // printf("%s\n", content.body);
     }
     else
     {
