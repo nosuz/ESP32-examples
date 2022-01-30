@@ -22,6 +22,8 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | WiFi                               | AP に接続するサンプル。接続と切断を 5 秒毎に繰り返す。                                             | [net/wifi](net/wifi)                                     |
 | WiFi SmartConfig                   | AP を SmartConfig で設定するサンプル。                                                             | [net/wifi-smartconfig](net/wifi-smartconfig)             |
 | Config by WPS                      | WPS ボタンで AP の SSID とパスワードを自動設定する。                                               | [net/wps](net/wps)                                       |
+| MQTT                               | MQTT プロトコールで ADT7410 と ADT7310 で測定した温度をアップロードするサンプル。                  | [net/mqtt](net/mqtt)                                     |
+| Update Tweet                       | Twitter API v1 を使ってツイートするサンプル。                                                      | [net/twitter-client](net/twitter-client)                 |
 
 ## 使用方法
 
