@@ -11,8 +11,10 @@ esp_err_t init_i2c_master(void)
         .sda_io_num = CONFIG_I2C_MASTER_SDA,
         .scl_io_num = CONFIG_I2C_MASTER_SCL,
 #ifdef CONFIG_I2C_PULLUP
+        .sda_pullup_en = true,
         .scl_pullup_en = true,
 #else
+        .sda_pullup_en = false,
         .scl_pullup_en = false,
 #endif
         .master.clk_speed = CONFIG_I2C_FREQ_HZ * 1000,
