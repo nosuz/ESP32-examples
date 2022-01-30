@@ -21,19 +21,7 @@
 float adt7410_read_temp(void)
 {
     esp_err_t ret;
-
-    union
-    {
-        int16_t value;
-        struct temp_struct
-        {
-            // Little Endian
-            uint8_t low;
-            uint8_t high;
-        } data;
-
-    } i2c_data;
-
+    I2C_DATA i2c_data;
     float temp;
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();

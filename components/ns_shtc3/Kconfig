@@ -1,0 +1,15 @@
+menu "NS SHTC3 Configuration"
+
+    config SHTC3_LOW_POWER_MODE
+        bool "Use low power measure mode"
+        default true
+        help
+            Use low power measure mode. Low power consumption but low resolution.
+
+    config SHTC3_USE_STRETCH
+        bool "Use I2C clock stretch waiting for measure."
+        default true
+        help
+            Use I2C clock stretch.
+
+endmenu

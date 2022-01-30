@@ -24,6 +24,7 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | Config by WPS                      | WPS ボタンで AP の SSID とパスワードを自動設定する。                                               | [net/wps](net/wps)                                       |
 | MQTT                               | MQTT プロトコールで ADT7410 と ADT7310 で測定した温度をアップロードするサンプル。                  | [net/mqtt](net/mqtt)                                     |
 | Update Tweet                       | Twitter API v1 を使ってツイートするサンプル。                                                      | [net/twitter-client](net/twitter-client)                 |
+| I2C 温度湿度センサー SHTC3         | I2C 接続の温度湿度センサーの読み取りモジュール。                                                   | [i2c/read_shtc3](i2c/read_shtc3)                         |
 
 ## 使用方法
 
