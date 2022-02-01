@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "esp_types.h"
 
 #include "ns_crc8.h"
 
@@ -21,11 +20,12 @@ uint8_t crc8_i2c(uint8_t *buf, size_t size)
     return crc;
 }
 
-bool i2c_crc8_check(uint16_t value, uint8_t crc)
+esp_err_t i2c_crc8_check(uint16_t value, uint8_t crc)
 {
     // return T if CRC error
     uint8_t buf[2];
     buf[0] = (value >> 8);
     buf[1] = (value & 0xff);
-    return (crc8_i2c(buf, 2) == crc) ? false : true;
+
+    return (crc8_i2c(buf, 2) == crc) ? ESP_OK : ESP_ERR_INVALID_CRC;
 }
