@@ -1,4 +1,4 @@
-menu "ADT7410 Configuration"
+menu "NS ADT7410 Configuration"
 
     choice
         prompt "Address of ADT7410"

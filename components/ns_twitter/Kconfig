@@ -1,4 +1,4 @@
-menu "Twitter Client Configuration"
+menu "NS Twitter Client Configuration"
 
     config CONSUMER_TOKEN
         string "Consumer Token"

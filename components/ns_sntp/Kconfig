@@ -1,4 +1,4 @@
-menu "SNTP Configuration"
+menu "NS SNTP Configuration"
 
     config TIME_ZONE
         string "Time Zone"
