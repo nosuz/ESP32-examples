@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 
 #include "ns_adt7410.h"
 
@@ -18,11 +19,12 @@
 
 #define ADT7410_TEMP_MSB 0x00
 
-float adt7410_read_temp(void)
+static const char *TAG = "adt7410";
+
+esp_err_t adt7410_read_temp(float *temp)
 {
     esp_err_t ret;
     I2C_DATA i2c_data;
-    float temp;
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
@@ -38,12 +40,16 @@ float adt7410_read_temp(void)
     i2c_master_stop(cmd);
     // Execute and return status, should return 0
     ret = i2c_master_cmd_begin(CONFIG_I2C_PORT, cmd, pdMS_TO_TICKS(1000));
-    printf("I2C result: %02X\n", ret);
     i2c_cmd_link_delete(cmd);
-    // printf("%02X%02X >> ", i2c_data.data.high, i2c_data.data.low);
-    // printf("%04X\n", i2c_data.value);
-    int16_t value = i2c_data.value >> 3;
-    temp = (float)value * 0.0625;
 
-    return temp;
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Read id command error: %04X", ret);
+        return ret;
+    }
+
+    int16_t value = i2c_data.value >> 3;
+    *temp = (float)value * 0.0625;
+
+    return ret;
 }
