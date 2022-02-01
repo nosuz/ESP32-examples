@@ -29,12 +29,14 @@ void app_main(void)
 
     float temperature = 0;
     float humidity = 0;
+    float temp = 0;
     while (1)
     {
         shtc3_read_sensor(&temperature, &humidity);
-        printf("Temp.: %.01fC, Humi: %.01f%%\n", temperature, humidity);
+        printf("SHTC3 Temp: %.01fC, Humi: %.01f%%\n", temperature, humidity);
 
-        printf("temp %0.1f\n", adt7410_read_temp());
+        adt7410_read_temp(&temp);
+        printf("ADT7410 %0.1fC\n", temp);
 
         vTaskDelay(pdMS_TO_TICKS(5 * 1000));
     }

@@ -1,3 +1,3 @@
 #include "ns_i2c_master.h"
 
-float adt7410_read_temp(void);
+esp_err_t adt7410_read_temp(float *temp);
