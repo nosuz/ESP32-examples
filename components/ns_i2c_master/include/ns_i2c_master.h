@@ -20,6 +20,7 @@ esp_err_t init_i2c_master(void);
 esp_err_t delete_i2c_master(void);
 esp_err_t write_i2c_master(uint8_t address, uint8_t data[], size_t size);
 esp_err_t read_i2c_master(uint8_t address, uint8_t data[], size_t size);
+esp_err_t read_i2c_master_ending_nack(uint8_t address, uint8_t data[], size_t size);
 esp_err_t reset_i2c_devices_by_general_call(void);
 
 #endif

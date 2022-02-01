@@ -1,0 +1,17 @@
+menu "NS SHT4x Configuration"
+
+    choice
+        prompt "Measurement repeatability"
+
+        config SHT4X_HIGH_REPEATABILITY
+            bool "High"
+
+        config SHT4X_MEDIUM_REPEATABILITY
+            bool "Medium"
+
+        config SHT4X_LOW_REPEATABILITY
+            bool "Low"
+
+    endchoice
+
+endmenu

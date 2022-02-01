@@ -5,27 +5,28 @@
 
 #include "esp_log.h"
 
-#include "i2c.h"
-#include "SHT40.h"
+#include "ns_sht4x.h"
 
-static const char *TAG = "read_sht40";
+static const char *TAG = "main";
 
 void app_main(void)
 {
-    ESP_ERROR_CHECK(i2c_master_init());
+    ESP_ERROR_CHECK(init_i2c_master());
     ESP_LOGI(TAG, "I2C initialized successfully");
-    // SHT40_soft_reset();
 
-    uint32_t serial = SHT_serail_number();
+    ESP_ERROR_CHECK(sht4x_reset());
+
+    uint32_t serial = 0;
+    ESP_ERROR_CHECK(sht4x_read_id(&serial));
     printf("Serial: %08X\n", serial);
 
     while (1)
     {
         float temp, humid;
 
-        SHT40_read_sensor(&temp, &humid);
+        ESP_ERROR_CHECK(sht4x_read_sensor(&temp, &humid));
         printf("Tm=%.1fC\n", temp);
         printf("Hm=%.1f%%\n", humid);
-        vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(5 * 1000));
     }
 }

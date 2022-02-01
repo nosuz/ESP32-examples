@@ -69,6 +69,22 @@ esp_err_t read_i2c_master(uint8_t address, uint8_t data[], size_t size)
     return ret;
 }
 
+esp_err_t read_i2c_master_ending_nack(uint8_t address, uint8_t data[], size_t size)
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    // Start condition
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_READ, I2C_ACK_EN);
+    i2c_master_read(cmd, data, size, I2C_MASTER_LAST_NACK);
+    // Stop condition
+    i2c_master_stop(cmd);
+    // Execute and return status, should return 0
+    esp_err_t ret = i2c_master_cmd_begin(CONFIG_I2C_PORT, cmd, pdMS_TO_TICKS(1000));
+    i2c_cmd_link_delete(cmd);
+
+    return ret;
+}
+
 esp_err_t reset_i2c_devices_by_general_call(void)
 {
     uint8_t data[2];
