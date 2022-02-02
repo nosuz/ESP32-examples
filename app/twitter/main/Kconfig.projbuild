@@ -1,0 +1,9 @@
+menu "IoT sample Configuration"
+
+    config SLEEP_LENGTH
+        int "Sleep duration (min.)"
+        default 10
+        help
+            Sleep length in minutes.
+
+endmenu
