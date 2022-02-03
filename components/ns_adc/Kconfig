@@ -1,4 +1,4 @@
-menu "ADC Config"
+menu "NS ADC Config"
 
     config ADC1_CHANNEL
         int "ADC1 channel number"
