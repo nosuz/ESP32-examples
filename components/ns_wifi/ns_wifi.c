@@ -196,15 +196,25 @@ int wifi_init(void)
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
     if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
     {
-        ESP_LOGI(TAG, "get into WPS mode.");
-        // wifi_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
-        nvs_error = 1;
+        // ESP_LOGI(TAG, "get into WPS mode.");
+        // // wifi_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
+        // nvs_error = 1;
+        wifi_config_t default_wifi_config = {
+            .sta = {
+                .ssid = CONFIG_ESP_WIFI_SSID,
+                .password = CONFIG_ESP_WIFI_PASSWORD,
+                .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+                .pmf_cfg = {.capable = true, .required = false},
+            },
+        };
+        wifi_config = default_wifi_config;
     }
     else
     {
         ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+        // ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     }
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
