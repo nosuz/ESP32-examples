@@ -59,8 +59,9 @@ void app_main(void)
 
     if (wifi_init())
     {
-        ESP_LOGW(TAG, "NVS error or cleared and start WPS.");
-        wifi_wps_start();
+        // ESP_LOGW(TAG, "NVS error or cleared and start WPS.");
+        // wifi_wps_start();
+        ESP_LOGW(TAG, "NVS error or cleared.");
     }
     else
     {
