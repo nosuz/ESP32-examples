@@ -70,9 +70,12 @@ void button_press_handler(void *arg)
                 // long pressed
                 repeat_timer = false;
 
+#ifdef CONFIG_USE_WPS
+                ESP_LOGI(TAG, "long pressed. start WPS.");
+                wifi_wps_start();
+#else
                 ESP_LOGI(TAG, "long pressed.");
-                // ESP_LOGI(TAG, "long pressed. start WPS.");
-                // wifi_wps_start();
+#endif
             }
         }
     }

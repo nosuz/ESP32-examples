@@ -162,6 +162,18 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     case WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP:
         ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP");
         break;
+    case WIFI_EVENT_AP_STACONNECTED:
+        ESP_LOGI(TAG, "WIFI_EVENT_AP_STACONNECTED");
+        wifi_event_ap_staconnected_t *ap_event = (wifi_event_ap_staconnected_t *)event_data;
+        ESP_LOGI(TAG, "station " MACSTR " join, AID=%d",
+                 MAC2STR(ap_event->mac), ap_event->aid);
+        break;
+    case WIFI_EVENT_AP_STADISCONNECTED:
+        ESP_LOGI(TAG, "WIFI_EVENT_AP_STADISCONNECTED");
+        // wifi_event_ap_stadisconnected_t *ap_event = (wifi_event_ap_stadisconnected_t *)event_data;
+        // ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d",
+        //          MAC2STR(ap_event->mac), ap_event->aid);
+        break;
     default:
         ESP_LOGI(TAG, "event_base: WIFI_EVENT, id %d", event_id);
         break;
@@ -180,7 +192,6 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base,
 int wifi_init(void)
 {
     int nvs_error = 0;
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -196,25 +207,29 @@ int wifi_init(void)
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
     if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
     {
-        // ESP_LOGI(TAG, "get into WPS mode.");
-        // // wifi_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
-        // nvs_error = 1;
-        wifi_config_t default_wifi_config = {
-            .sta = {
-                .ssid = CONFIG_ESP_WIFI_SSID,
-                .password = CONFIG_ESP_WIFI_PASSWORD,
-                .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-                .pmf_cfg = {.capable = true, .required = false},
-            },
-        };
-        wifi_config = default_wifi_config;
+#ifdef CONFIG_USE_WPS
+        ESP_LOGI(TAG, "get into WPS mode.");
+        // wifi_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
+#else
+        // USE_SOFTAP
+        // wifi_config_t sta_wifi_config = WIFI_INIT_CONFIG_DEFAULT();
+        // wifi_config_t sta_wifi_config = {
+        //     .sta = {
+        //         .ssid = CONFIG_INIT_WIFI_SSID,
+        //         .password = CONFIG_INIT_WIFI_PASSWORD,
+        //         .threshold.authmode = WIFI_AUTH_WPA2_PSK, // filter WPA2 access point
+        //         .pmf_cfg = {.capable = true, .required = false},
+        //     },
+        // };
+        // ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_wifi_config));
+#endif
+        nvs_error = 1;
     }
     else
     {
         ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
-        // ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     }
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
@@ -229,18 +244,22 @@ int wifi_init(void)
 
 void wifi_connect(void)
 {
-    if (initialized_wifi)
+    if (!started_wifi)
     {
-        if (!started_wifi)
+        if (initialized_wifi)
         {
             ESP_ERROR_CHECK(esp_wifi_start());
             started_wifi = true;
             ESP_LOGI(TAG, "wifi started.");
         }
+        else
+        {
+            ESP_LOGE(TAG, "wifi not initialized.");
+        }
     }
     else
     {
-        ESP_LOGE(TAG, "wifi not initialized.");
+        ESP_LOGI(TAG, "already wifi started.");
     }
 }
 
@@ -305,4 +324,81 @@ void wifi_disconnect(void)
     esp_wifi_stop();
     xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
+}
+
+static void print_auth_mode(int authmode)
+{
+    switch (authmode)
+    {
+    case WIFI_AUTH_OPEN:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_OPEN");
+        break;
+    case WIFI_AUTH_WEP:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WEP");
+        break;
+    case WIFI_AUTH_WPA_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_PSK");
+        break;
+    case WIFI_AUTH_WPA2_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_PSK");
+        break;
+    case WIFI_AUTH_WPA_WPA2_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_WPA2_PSK");
+        break;
+    case WIFI_AUTH_WPA2_ENTERPRISE:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_ENTERPRISE");
+        break;
+    case WIFI_AUTH_WPA3_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA3_PSK");
+        break;
+    case WIFI_AUTH_WPA2_WPA3_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_WPA3_PSK");
+        break;
+    default:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_UNKNOWN");
+        break;
+    }
+}
+
+void start_ap_select_mode(void)
+{
+    ESP_LOGI(TAG, "start AP select mode.");
+
+    uint16_t number = CONFIG_SCAN_AP_LIST_SIZE;
+    wifi_ap_record_t ap_info[CONFIG_SCAN_AP_LIST_SIZE];
+    uint16_t ap_count = 0;
+    memset(ap_info, 0, sizeof(ap_info));
+
+    // without this statement, no IP address is provided.
+    esp_netif_create_default_wifi_ap();
+    // chamge mode before set config
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    wifi_config_t wifi_config = {
+        .ap = {
+            .ssid = CONFIG_INIT_WIFI_SSID,
+            .ssid_len = strlen(CONFIG_INIT_WIFI_SSID),
+            .password = CONFIG_INIT_WIFI_PASSWORD,
+            .authmode = WIFI_AUTH_WPA2_PSK, // use WPA2 is password is provided
+            .max_connection = CONFIG_MAX_AP_CONNECT,
+        },
+    };
+    if (strlen(CONFIG_INIT_WIFI_PASSWORD) == 0)
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    // hold until scaning all channels.
+    esp_wifi_scan_start(NULL, true);
+
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+    ESP_LOGI(TAG, "Total APs scanned = %u", ap_count);
+    for (int i = 0; (i < CONFIG_SCAN_AP_LIST_SIZE) && (i < ap_count); i++)
+    {
+        ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
+        ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
+        print_auth_mode(ap_info[i].authmode);
+        ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
+    }
 }

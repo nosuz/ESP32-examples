@@ -1,32 +1,60 @@
-menu "NS WiFi and WPS Configuration"
+menu "NS WiFi Configuration"
 
-    config ESP_WIFI_SSID
-        string "WiFi SSID"
+   choice
+      prompt "Access point and Password"
+
+      config USE_WPS
+         bool "Use WPS button to connect"
+
+      config USE_SOFTAP
+         bool "Select AP from Web."
+
+   endchoice
+
+   if USE_SOFTAP
+    config INIT_WIFI_SSID
+        string "WiFi Access Point"
         default "myssid"
         help
-            SSID (network name) to connect to.
+            Access Point name (SSID)
 
-    config ESP_WIFI_PASSWORD
+    config INIT_WIFI_PASSWORD
         string "WiFi Password"
         default "mypassword"
         help
-            WiFi password (WPA or WPA2) to use.
+            WiFi password for WPA or WPA2
+
+   config MAX_AP_CONNECT
+        int "Max connection size to AP"
+        range 0 8
+        default 3
+        help
+            Max number of connections to APs.
+
+   config SCAN_AP_LIST_SIZE
+        int "Max scan AP list size"
+        range 0 20
+        default 10
+        help
+            Max number of detecting APs.
+
+   endif
 
    config TRIGER_PIN
-       int "WPS triger GPIO"
+       int "Triger GPIO to get into AP select mode"
         range 0 39 if IDF_TARGET_ESP32
         range 0 21 if IDF_TARGET_ESP32C3
         range 0 48 if IDF_TARGET_ESP32S3
         default 0
         help
-           Set triger GPIO number(IOxx) to start WPS.
+           Set triger GPIO number(IOxx) to start AP choice.
 
     config TRIGER_DURATION
-       int "Pressed duration to get into WPS mode."
+       int "Pressed duration to start AP select mode"
         range 2 5
         default 2
         help
-           Set a lengh to get into WPS mode.
+           Set a lengh to get into AP select mode.
 
     config LED_PIN
        int "GPIO connected to LED"

@@ -6,3 +6,4 @@ void wifi_connect(void);
 void wifi_wps_start(void);
 int wifi_wait_connection(void);
 void wifi_disconnect(void);
+void start_ap_select_mode(void);

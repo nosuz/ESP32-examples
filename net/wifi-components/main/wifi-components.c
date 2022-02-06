@@ -15,8 +15,13 @@ void app_main(void)
 
     if (wifi_init())
     {
+#ifdef CONFIG_USE_WPS
         ESP_LOGW(TAG, "NVS error or cleared and start WPS.");
         wifi_wps_start();
+#else
+        ESP_LOGW(TAG, "NVS error or cleared.");
+        start_ap_select_mode();
+#endif
     }
     else
     {
@@ -24,25 +29,18 @@ void app_main(void)
         wifi_connect();
     }
 
-    while (1)
+    ESP_LOGI(TAG, "Wait connection");
+    if (wifi_wait_connection())
     {
-        ESP_LOGI(TAG, "Wait connection");
-        if (wifi_wait_connection())
-        {
-            ns_http_get("https://www.yahoo.co.jp");
-            vTaskDelay(1 * 1000 / portTICK_PERIOD_MS);
-            ns_http_get("https://www.google.com/");
-        }
-        else
-        {
-            ESP_LOGW(TAG, "Failed to connect");
-        }
+        ns_http_get("https://www.yahoo.co.jp");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        ns_http_get("https://www.google.com/");
 
         wifi_disconnect();
+        ESP_LOGI(TAG, "Disconnected");
     }
-
-    while (1)
+    else
     {
-        vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
+        ESP_LOGW(TAG, "Failed to connect");
     }
 }
