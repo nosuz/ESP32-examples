@@ -1,6 +1,6 @@
 # WiFi exsample
 
-Connect the AP and disconnect. After 5 sec. reconnect the AP.
+If NVS has no SSID or the triger button is pressed on boot, ESP32 will be access point and start HTTP server to select a access point.
 
 ## Erase NVS
 

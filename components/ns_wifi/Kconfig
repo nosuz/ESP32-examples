@@ -1,44 +1,30 @@
 menu "NS WiFi Configuration"
 
-   choice
-      prompt "Access point and Password"
+   config WIFI_AP_SSID
+      string "AP SSID"
+      default "myssid"
+      help
+         Access Point name (SSID)
 
-      config USE_WPS
-         bool "Use WPS button to connect"
+   config WIFI_AP_PASSWORD
+      string "AP Password"
+      default "mypassword"
+      help
+         Access Point password
 
-      config USE_SOFTAP
-         bool "Select AP from Web."
+config MAX_AP_CONNECT
+      int "Max connection size to AP"
+      range 0 8
+      default 3
+      help
+         Max number of connections to APs.
 
-   endchoice
-
-   if USE_SOFTAP
-    config INIT_WIFI_SSID
-        string "WiFi Access Point"
-        default "myssid"
-        help
-            Access Point name (SSID)
-
-    config INIT_WIFI_PASSWORD
-        string "WiFi Password"
-        default "mypassword"
-        help
-            WiFi password for WPA or WPA2
-
-   config MAX_AP_CONNECT
-        int "Max connection size to AP"
-        range 0 8
-        default 3
-        help
-            Max number of connections to APs.
-
-   config SCAN_AP_LIST_SIZE
-        int "Max scan AP list size"
-        range 0 20
-        default 10
-        help
-            Max number of detecting APs.
-
-   endif
+config SCAN_AP_LIST_SIZE
+      int "Max scan AP list size"
+      range 0 20
+      default 10
+      help
+         Max number of detecting APs.
 
    config TRIGER_PIN
        int "Triger GPIO to get into AP select mode"
@@ -65,7 +51,7 @@ menu "NS WiFi Configuration"
         help
            Set GPIO number (IOxx) for LED.
 
-    config ESP_MAXIMUM_RETRY
+    config AP_MAXIMUM_RETRY
        int "Maximum retry"
         default 3
         help

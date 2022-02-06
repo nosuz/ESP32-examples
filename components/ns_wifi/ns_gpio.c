@@ -9,10 +9,6 @@
 
 #include "ns_wifi.h"
 
-#if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S3
-#define TRIGER_PAD CONFIG_TRIGER_PAD
-#endif
-
 #define TRIGER_PIN CONFIG_TRIGER_PIN
 #define GPIO_LED CONFIG_LED_PIN
 
@@ -70,12 +66,11 @@ void button_press_handler(void *arg)
                 // long pressed
                 repeat_timer = false;
 
-#ifdef CONFIG_USE_WPS
-                ESP_LOGI(TAG, "long pressed. start WPS.");
-                wifi_wps_start();
-#else
                 ESP_LOGI(TAG, "long pressed.");
-#endif
+                // ESP_LOGI(TAG, "long pressed. start WPS.");
+                // wifi_wps_start();
+                // ESP_LOGI(TAG, "long pressed. start AP select mode.");
+                // wifi_start_ap_select();
             }
         }
     }
@@ -134,15 +129,17 @@ void config_gpio(void)
     gpio_reset_pin(GPIO_LED);
     gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
 
+    // enable WPS if long pressed
     press_timer = xTimerCreate("PRESS_TIMER", 5, pdFALSE, NULL, button_press_handler);
+
     // blink_timer expires every 500ms.
-    blink_timer = xTimerCreate("LED_TIMER", 500 / portTICK_PERIOD_MS, pdFALSE, NULL, blink_led);
+    blink_timer = xTimerCreate("LED_TIMER", pdMS_TO_TICKS(500), pdFALSE, NULL, blink_led);
 
     gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     gpio_isr_handler_add(TRIGER_PIN, pin_intr_handler, (void *)TRIGER_PIN); // don't need gpio_intr_enable()
 }
 
-int read_gpio(void)
+bool pressed_triger(void)
 {
-    return gpio_get_level(TRIGER_PIN);
+    return (gpio_get_level(TRIGER_PIN) == 0) ? true : false;
 }
