@@ -18,6 +18,7 @@
 static const char *TAG = "main";
 
 RTC_DATA_ATTR static int boot_count = 0;
+RTC_DATA_ATTR static time_t last_synced = 0;
 
 char tweet[TWEET_BUF_SIZE];
 
@@ -41,9 +42,6 @@ void app_main(void)
 
     init_adc();
     init_i2c_master();
-
-    time(&now);
-    localtime_r(&now, &timeinfo);
 
     read_adc_voltage(&voltage);
     battery = (float)voltage * 3 / 1000; // (100k + 200k) / 100k = 3
@@ -75,12 +73,13 @@ void app_main(void)
         // Get systemtime into `now` and set local time in `timeinfo`
         time(&now);
         localtime_r(&now, &timeinfo);
-        if (timeinfo.tm_year < (2016 - 1900))
+        if ((timeinfo.tm_year < (2016 - 1900)) || ((now - last_synced) > 3600))
         {
             ESP_LOGW(TAG, "Update systemtime.");
             start_sntp();
             time(&now);
             localtime_r(&now, &timeinfo);
+            last_synced = now;
         }
         else
         {
