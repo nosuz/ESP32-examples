@@ -42,9 +42,6 @@ void app_main(void)
     init_adc();
     init_i2c_master();
 
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
     read_adc_voltage(&voltage);
     battery = (float)voltage * 3 / 1000; // (100k + 200k) / 100k = 3
     printf("Battery: %0.2f V\n", battery);
@@ -55,7 +52,7 @@ void app_main(void)
     nvs_init();
     config_gpio();
 
-    init_sntp();
+    init_sntp(3600);
 
     if (wifi_init())
     {
@@ -72,34 +69,23 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        // Get systemtime into `now` and set local time in `timeinfo`
+        start_sntp();
         time(&now);
         localtime_r(&now, &timeinfo);
-        if (timeinfo.tm_year < (2016 - 1900))
-        {
-            ESP_LOGW(TAG, "Update systemtime.");
-            start_sntp();
-            time(&now);
-        }
-        else
-        {
-            ESP_LOGI(TAG, "Skip updating systemtime.");
-        }
 
-        localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
         ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
 
         twitter_init_api_params();
 
-        strftime(strftime_buf, sizeof(strftime_buf), "%H時%m分", &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%H時%M分", &timeinfo);
 
         snprintf(tweet, TWEET_BUF_SIZE,
                  "自動更新(%d分毎): %s現在\n"
                  "室温1: %.01f℃, 室温2: %.01f℃, 湿度: %.0f%%\n"
                  "電圧: %.02fV\n"
-                 "起動%d回目\n"
-                 "Tweet from #ESP32",
+                 "起動%d回目",
+                 //  "Tweet from #ESP32",
                  CONFIG_SLEEP_LENGTH,
                  strftime_buf,
                  adt7410_temp,

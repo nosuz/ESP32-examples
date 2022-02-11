@@ -28,9 +28,6 @@
 #include "ns_twitter.h"
 
 #define MAX_PARAMS 16
-#define MAX_KEY_LENGTH 31
-#define MAX_VALUE_LENGTH 511
-
 #define BUFFER_BLOCK_SIZE (1024)
 
 // #define DEBUG
@@ -48,10 +45,15 @@ static char encoding_table[] = {
     '4', '5', '6', '7', '8', '9', '+', '/'};
 static int mod_table[] = {0, 2, 1};
 
-int param_index;
-char dict_key[MAX_PARAMS][MAX_KEY_LENGTH];
-char dict_value[MAX_PARAMS][MAX_VALUE_LENGTH];
-bool dict_param_flag[MAX_PARAMS];
+typedef struct
+{
+    char *key;
+    char *value;
+    bool api_flag;
+} TWITTER_API_PARAM;
+
+int param_index = 0;
+TWITTER_API_PARAM api_params[MAX_PARAMS];
 
 char *base64_encode(unsigned char *data,
                     uint16_t input_length)
@@ -201,20 +203,46 @@ http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
+void twiter_reset_api_params(void)
+{
+    for (int i = 0; i < param_index; i++)
+    {
+        if (api_params[i].key != NULL)
+        {
+            free(api_params[i].key);
+            api_params[i].key = NULL;
+        }
+
+        if (api_params[i].value != NULL)
+        {
+            free(api_params[i].value);
+            api_params[i].value = NULL;
+        }
+
+        api_params[i].api_flag = false;
+    }
+
+    param_index = 0;
+}
+
 void twitter_append_oauth(char *key, char *value)
 {
-    strcpy(dict_key[param_index], key);
-    strcpy(dict_value[param_index], value);
-    dict_param_flag[param_index] = false;
+    api_params[param_index].key = malloc(strlen(key) + 1);
+    api_params[param_index].value = malloc(strlen(value) + 1);
+    strcpy(api_params[param_index].key, key);
+    strcpy(api_params[param_index].value, value);
+    api_params[param_index].api_flag = false;
 
     param_index++;
 }
 
 void twitter_set_api_param(char *key, char *value)
 {
-    strcpy(dict_key[param_index], key);
-    strcpy(dict_value[param_index], value);
-    dict_param_flag[param_index] = true;
+    api_params[param_index].key = malloc(strlen(key) + 1);
+    api_params[param_index].value = malloc(strlen(value) + 1);
+    strcpy(api_params[param_index].key, key);
+    strcpy(api_params[param_index].value, value);
+    api_params[param_index].api_flag = true;
 
     param_index++;
 }
@@ -236,7 +264,7 @@ void twitter_init_api_params(void)
     }
     // ESP_LOG_BUFFER_HEXDUMP(TAG, oauth_nonce, 32, ESP_LOG_INFO);
 
-    param_index = 0;
+    twiter_reset_api_params();
 
     twitter_append_oauth("oauth_consumer_key", CONFIG_CONSUMER_TOKEN);
     twitter_append_oauth("oauth_token", CONFIG_OAUTH_TOKEN);
@@ -260,32 +288,23 @@ void twitter_init_api_params(void)
 
 char *concat_params(void)
 {
-    char tmp[MAX_KEY_LENGTH > MAX_VALUE_LENGTH ? MAX_KEY_LENGTH : MAX_VALUE_LENGTH]; // use longer length
-    bool tmp_flag;
+    TWITTER_API_PARAM tmp;
 
-    // sort by key and value
+    // sort by key; expected no duplicated key names.
     for (int i = 0; i < (param_index - 1); i++)
     {
         int min_index = i;
         for (int j = i + 1; j < param_index; j++)
         {
-            if (strcmp(dict_key[min_index], dict_key[j]) > 0)
+            if (strcmp(api_params[min_index].key, api_params[j].key) > 0)
                 min_index = j;
         }
 
         if (i != min_index)
         {
-            strcpy(tmp, dict_key[i]);
-            strcpy(dict_key[i], dict_key[min_index]);
-            strcpy(dict_key[min_index], tmp);
-
-            strcpy(tmp, dict_value[i]);
-            strcpy(dict_value[i], dict_value[min_index]);
-            strcpy(dict_value[min_index], tmp);
-
-            tmp_flag = dict_param_flag[i];
-            dict_param_flag[i] = dict_param_flag[min_index];
-            dict_param_flag[min_index] = tmp_flag;
+            tmp = api_params[i];
+            api_params[i] = api_params[min_index];
+            api_params[min_index] = tmp;
         }
     }
 
@@ -296,8 +315,8 @@ char *concat_params(void)
         uint16_t new_length = strlen(params) + 1;
         if (i > 0)
             new_length += 1;
-        new_length += strlen(dict_key[i]);
-        char *encoded_value = percent_encode(dict_value[i]);
+        new_length += strlen(api_params[i].key);
+        char *encoded_value = percent_encode(api_params[i].value);
         new_length += 1;
         new_length += strlen(encoded_value);
 
@@ -305,11 +324,11 @@ char *concat_params(void)
         if (realloced != NULL)
         {
             params = realloced;
-            // printf("key: %s\n", dict_key[i]);
+            // printf("key: %s\n", api_params[i].key);
             // printf("val: %s\n", encoded_value);
             if (i > 0)
                 strcat(params, "&");
-            strcat(params, dict_key[i]);
+            strcat(params, api_params[i].key);
             strcat(params, "=");
             strcat(params, encoded_value);
         }
@@ -386,7 +405,7 @@ char *make_oauth_header(char *method, char *url)
 {
     // for (int i = 0; i < param_index; i++)
     // {
-    //     ESP_LOGI(TAG, "params(%d): %s -> %s", i, dict_key[i], dict_value[i]);
+    //     ESP_LOGI(TAG, "params(%d): %s -> %s", i, api_params[i].key, api_params[i].value);
     // }
 
     append_signature(method, url);
@@ -403,20 +422,20 @@ char *make_oauth_header(char *method, char *url)
     bool first_item = true;
     for (int i = 0; i < param_index; i++)
     {
-        if (regexec(&preg, dict_key[i], size, patternMatch, 0) == 0)
+        if (regexec(&preg, api_params[i].key, size, patternMatch, 0) == 0)
         {
-            char *encoded_value = percent_encode(dict_value[i]);
+            char *encoded_value = percent_encode(api_params[i].value);
 
             uint16_t new_length = strlen(oauth_header) + 1;
             if (!first_item)
-                new_length += 1;                   // for ','
-            new_length += strlen(dict_key[i]) + 2; // key + '="'
-            new_length += strlen(encoded_value);   // for percent encoded value
-            new_length += 1;                       // for '"'
+                new_length += 1;                         // for ','
+            new_length += strlen(api_params[i].key) + 2; // key + '="'
+            new_length += strlen(encoded_value);         // for percent encoded value
+            new_length += 1;                             // for '"'
             char *realloced = realloc(oauth_header, sizeof(char) * new_length);
             if (realloced == NULL)
             {
-                ESP_LOGE(TAG, "Failed realloc(oauth_header, %d): %s", new_length, dict_key[i]);
+                ESP_LOGE(TAG, "Failed realloc(oauth_header, %d): %s", new_length, api_params[i].key);
             }
             else
             {
@@ -429,7 +448,7 @@ char *make_oauth_header(char *method, char *url)
                 {
                     strcat(oauth_header, ",");
                 }
-                strcat(oauth_header, dict_key[i]);
+                strcat(oauth_header, api_params[i].key);
                 strcat(oauth_header, "=\"");
                 strcat(oauth_header, encoded_value);
                 strcat(oauth_header, "\"");
@@ -450,19 +469,19 @@ char *make_post_data(void)
     bool first_item = true;
     for (int i = 0; i < param_index; i++)
     {
-        if (!dict_param_flag[i])
+        if (!api_params[i].api_flag)
             continue;
 
         uint16_t new_length = strlen(post_data) + 1;
         if (!first_item)
-            new_length += 1;                   // for '&'
-        new_length += strlen(dict_key[i]) + 1; // key + '='
-        char *encoded_value = percent_encode(dict_value[i]);
+            new_length += 1;                         // for '&'
+        new_length += strlen(api_params[i].key) + 1; // key + '='
+        char *encoded_value = percent_encode(api_params[i].value);
         new_length += strlen(encoded_value);
         char *realloced = realloc(post_data, sizeof(char) * new_length); // expand memory
         if (realloced == NULL)
         {
-            ESP_LOGE(TAG, "Failed realloc(post_data, %d): %s", new_length, dict_key[i]);
+            ESP_LOGE(TAG, "Failed realloc(post_data, %d): %s", new_length, api_params[i].key);
         }
         else
         {
@@ -475,7 +494,7 @@ char *make_post_data(void)
             {
                 strcat(post_data, "&");
             }
-            strcat(post_data, dict_key[i]);
+            strcat(post_data, api_params[i].key);
             strcat(post_data, "=");
             strcat(post_data, encoded_value);
         }

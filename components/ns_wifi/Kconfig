@@ -26,6 +26,18 @@ config SCAN_AP_LIST_SIZE
       help
          Max number of detecting APs.
 
+    config ESP_WIFI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) to connect to.
+
+    config ESP_WIFI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) to use.
+
    config TRIGER_PIN
        int "Triger GPIO to get into AP select mode"
         range 0 39 if IDF_TARGET_ESP32
