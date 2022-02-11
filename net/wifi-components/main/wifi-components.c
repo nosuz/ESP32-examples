@@ -13,36 +13,26 @@ void app_main(void)
     nvs_init();
     config_gpio();
 
-    if (wifi_init())
+    if (wifi_init() | pressed_triger())
     {
-        ESP_LOGW(TAG, "NVS error or cleared and start WPS.");
-        wifi_wps_start();
+        ESP_LOGW(TAG, "No AP info in NVS or Pressed triger button");
+        wifi_ap_select_mode();
+    }
+    ESP_LOGI(TAG, "Try to connect");
+    wifi_connect();
+
+    ESP_LOGI(TAG, "Wait connection");
+    if (wifi_wait_connection())
+    {
+        ns_http_get("https://www.yahoo.co.jp");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        ns_http_get("https://www.google.com/");
+
+        wifi_disconnect();
+        ESP_LOGI(TAG, "Disconnected");
     }
     else
     {
-        ESP_LOGI(TAG, "Try to connect");
-        wifi_connect();
-    }
-
-    while (1)
-    {
-        ESP_LOGI(TAG, "Wait connection");
-        if (wifi_wait_connection())
-        {
-            ns_http_get("https://www.yahoo.co.jp");
-            vTaskDelay(1 * 1000 / portTICK_PERIOD_MS);
-            ns_http_get("https://www.google.com/");
-        }
-        else
-        {
-            ESP_LOGW(TAG, "Failed to connect");
-        }
-
-        wifi_disconnect();
-    }
-
-    while (1)
-    {
-        vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
+        ESP_LOGW(TAG, "Failed to connect");
     }
 }

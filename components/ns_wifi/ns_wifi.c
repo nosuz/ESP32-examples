@@ -10,6 +10,7 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "freertos/semphr.h"
 #include "esp_wifi.h"
 // #include "esp_wpa2.h"
 #include "esp_event.h"
@@ -19,13 +20,6 @@
 #include "ns_wifi.h"
 
 #define WPS_MODE WPS_TYPE_PBC
-
-/* The examples use WiFi configuration that you can set via project configuration menu
-
-   If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
-*/
-#define ESP_MAXIMUM_RETRY CONFIG_ESP_MAXIMUM_RETRY
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
@@ -38,14 +32,15 @@ static EventGroupHandle_t s_wifi_event_group;
 
 static const char *TAG = "wifi";
 
-static esp_wps_config_t wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
-static wifi_config_t wps_ap_creds[MAX_WPS_AP_CRED];
+static wifi_config_t wifi_ap_configs[MAX_WPS_AP_CRED];
 static int s_ap_creds_num = 0;
 static int s_retry_num = 0;
 static bool wifi_stop_flag = false;
 static bool initialized_wifi = false;
 static bool started_wifi = false;
 static bool wps_in_progress = false;
+static bool ap_select_mode = false;
+static SemaphoreHandle_t restart_semaphore = NULL;
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
@@ -82,7 +77,12 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             // skip retry connect while WPS in progress
             ESP_LOGI(TAG, "WPS in progress. Give up reconnection.");
         }
-        else if (s_retry_num < ESP_MAXIMUM_RETRY)
+        else if (ap_select_mode)
+        {
+            // skip retry connect while WPS in progress
+            ESP_LOGI(TAG, "AP select mode. Give up reconnection.");
+        }
+        else if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
         {
             esp_wifi_connect();
             s_retry_num++;
@@ -94,8 +94,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 
             if (ap_idx < s_ap_creds_num)
             {
-                ESP_LOGI(TAG, "Connecting to SSID: %s", wps_ap_creds[ap_idx].sta.ssid);
-                ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wps_ap_creds[ap_idx++]));
+                ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_ap_configs[ap_idx].sta.ssid);
+                ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[ap_idx++]));
                 esp_wifi_connect();
             }
             s_retry_num = 0;
@@ -117,15 +117,16 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             s_ap_creds_num = evt->ap_cred_cnt;
             for (i = 0; i < s_ap_creds_num; i++)
             {
-                memcpy(wps_ap_creds[i].sta.ssid, evt->ap_cred[i].ssid,
+                memcpy(wifi_ap_configs[i].sta.ssid, evt->ap_cred[i].ssid,
                        sizeof(evt->ap_cred[i].ssid));
-                memcpy(wps_ap_creds[i].sta.password, evt->ap_cred[i].passphrase,
+                memcpy(wifi_ap_configs[i].sta.password, evt->ap_cred[i].passphrase,
                        sizeof(evt->ap_cred[i].passphrase));
             }
             /* If multiple AP credentials are received from WPS, connect with first one */
-            ESP_LOGI(TAG, "Connecting to SSID: %s, Passphrase: %s",
-                     wps_ap_creds[0].sta.ssid, wps_ap_creds[0].sta.password);
-            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wps_ap_creds[0]));
+            // ESP_LOGI(TAG, "Connecting to SSID: %s, Passphrase: %s",
+            //          wifi_ap_configs[0].sta.ssid, wifi_ap_configs[0].sta.password);
+            ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_ap_configs[0].sta.ssid);
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[0]));
         }
         /*
         * If only one AP credential is received from WPS, there will be no event data and
@@ -141,14 +142,12 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     case WIFI_EVENT_STA_WPS_ER_FAILED:
         ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_FAILED");
         ESP_ERROR_CHECK(esp_wifi_wps_disable());
-        ESP_ERROR_CHECK(esp_wifi_wps_enable(&wps_config));
-        ESP_ERROR_CHECK(esp_wifi_wps_start(0));
+        stop_blink();
         break;
     case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
         ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_TIMEOUT");
         ESP_ERROR_CHECK(esp_wifi_wps_disable());
-        ESP_ERROR_CHECK(esp_wifi_wps_enable(&wps_config));
-        ESP_ERROR_CHECK(esp_wifi_wps_start(0));
+        stop_blink();
         break;
     // case WIFI_EVENT_STA_WPS_ER_PIN:
     //     ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_PIN");
@@ -161,6 +160,18 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         break;
     case WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP:
         ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP");
+        break;
+    case WIFI_EVENT_AP_STACONNECTED:
+        ESP_LOGI(TAG, "WIFI_EVENT_AP_STACONNECTED");
+        wifi_event_ap_staconnected_t *ap_event = (wifi_event_ap_staconnected_t *)event_data;
+        ESP_LOGI(TAG, "station " MACSTR " join, AID=%d",
+                 MAC2STR(ap_event->mac), ap_event->aid);
+        break;
+    case WIFI_EVENT_AP_STADISCONNECTED:
+        ESP_LOGI(TAG, "WIFI_EVENT_AP_STADISCONNECTED");
+        // wifi_event_ap_stadisconnected_t *ap_event = (wifi_event_ap_stadisconnected_t *)event_data;
+        // ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d",
+        //          MAC2STR(ap_event->mac), ap_event->aid);
         break;
     default:
         ESP_LOGI(TAG, "event_base: WIFI_EVENT, id %d", event_id);
@@ -180,7 +191,6 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base,
 int wifi_init(void)
 {
     int nvs_error = 0;
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -195,25 +205,8 @@ int wifi_init(void)
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
     if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
-    {
-        // ESP_LOGI(TAG, "get into WPS mode.");
-        // // wifi_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
-        // nvs_error = 1;
-        wifi_config_t default_wifi_config = {
-            .sta = {
-                .ssid = CONFIG_ESP_WIFI_SSID,
-                .password = CONFIG_ESP_WIFI_PASSWORD,
-                .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-                .pmf_cfg = {.capable = true, .required = false},
-            },
-        };
-        wifi_config = default_wifi_config;
-    }
-    else
-    {
-        ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
-        // ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    }
+        nvs_error = 1;
+    ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     s_wifi_event_group = xEventGroupCreate();
@@ -229,19 +222,21 @@ int wifi_init(void)
 
 void wifi_connect(void)
 {
-    if (initialized_wifi)
+    if (started_wifi)
     {
-        if (!started_wifi)
-        {
-            ESP_ERROR_CHECK(esp_wifi_start());
-            started_wifi = true;
-            ESP_LOGI(TAG, "wifi started.");
-        }
+        ESP_LOGI(TAG, "already wifi started.");
+        return;
     }
-    else
+
+    if (!initialized_wifi)
     {
         ESP_LOGE(TAG, "wifi not initialized.");
+        return;
     }
+
+    ESP_ERROR_CHECK(esp_wifi_start());
+    started_wifi = true;
+    ESP_LOGI(TAG, "wifi started.");
 }
 
 void wifi_wps_start(void)
@@ -255,10 +250,18 @@ void wifi_wps_start(void)
 
     ESP_LOGI(TAG, "WPS start");
     start_blink();
-    ESP_ERROR_CHECK(esp_wifi_wps_disable());
+
+    ESP_LOGI(TAG, "get into WPS mode.");
+    esp_wps_config_t wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
     ESP_ERROR_CHECK(esp_wifi_wps_enable(&wps_config));
     ESP_ERROR_CHECK(esp_wifi_wps_start(0));
 }
+
+// void wifi_start_ap_select(void)
+// {
+//     ESP_LOGI(TAG, "Start AP select mode.");
+//     wifi_ap_select_mode();
+// }
 
 int wifi_wait_connection(void)
 {
@@ -293,9 +296,9 @@ void wifi_disconnect(void)
         while (wps_in_progress)
         {
             ESP_LOGI(TAG, "waiting WPS.");
-            vTaskDelay(2 * 1000 / portTICK_PERIOD_MS);
+            vTaskDelay(pdMS_TO_TICKS(2 * 1000));
         }
-        vTaskDelay(3 * 1000 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(2 * 1000));
     }
 
     ESP_LOGI(TAG, "wifi stop.");
@@ -305,4 +308,142 @@ void wifi_disconnect(void)
     esp_wifi_stop();
     xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
+}
+
+static void print_auth_mode(int authmode)
+{
+    switch (authmode)
+    {
+    case WIFI_AUTH_OPEN:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_OPEN");
+        break;
+    case WIFI_AUTH_WEP:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WEP");
+        break;
+    case WIFI_AUTH_WPA_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_PSK");
+        break;
+    case WIFI_AUTH_WPA2_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_PSK");
+        break;
+    case WIFI_AUTH_WPA_WPA2_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_WPA2_PSK");
+        break;
+    case WIFI_AUTH_WPA2_ENTERPRISE:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_ENTERPRISE");
+        break;
+    case WIFI_AUTH_WPA3_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA3_PSK");
+        break;
+    case WIFI_AUTH_WPA2_WPA3_PSK:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_WPA3_PSK");
+        break;
+    default:
+        ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_UNKNOWN");
+        break;
+    }
+}
+
+void wifi_ap_select_mode(void)
+{
+    ESP_LOGI(TAG, "start AP select mode.");
+    start_blink();
+    ap_select_mode = true;
+    esp_wifi_disconnect();
+
+    uint16_t number = CONFIG_SCAN_AP_LIST_SIZE;
+    wifi_ap_record_t ap_info[CONFIG_SCAN_AP_LIST_SIZE];
+    uint16_t ap_count = 0;
+    memset(ap_info, 0, sizeof(ap_info));
+
+    // without this statement, no IP address is provided.
+    esp_netif_create_default_wifi_ap();
+    // chamge mode before set config
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+
+    wifi_config_t sta_config = {
+        .sta = {
+            .threshold.authmode = WIFI_AUTH_WPA2_PSK, // filter WPA2 access point
+            .pmf_cfg = {.capable = true, .required = false},
+        },
+    };
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+
+    wifi_config_t ap_config = {
+        .ap = {
+            .ssid = CONFIG_WIFI_AP_SSID,
+            .ssid_len = strlen(CONFIG_WIFI_AP_SSID),
+            .password = CONFIG_WIFI_AP_PASSWORD,
+            .authmode = WIFI_AUTH_WPA2_PSK, // use WPA2 is password is provided
+            .max_connection = CONFIG_MAX_AP_CONNECT,
+        },
+    };
+    if (strlen(CONFIG_WIFI_AP_PASSWORD) == 0)
+        ap_config.ap.authmode = WIFI_AUTH_OPEN;
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
+
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    // hold until scaning all channels.
+    esp_wifi_scan_start(NULL, true);
+
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+    ESP_LOGI(TAG, "Total APs scanned = %u", ap_count);
+    for (int i = 0; (i < CONFIG_SCAN_AP_LIST_SIZE) && (i < ap_count); i++)
+    {
+        ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
+        ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
+        print_auth_mode(ap_info[i].authmode);
+        ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
+    }
+
+    restart_semaphore = xSemaphoreCreateBinary();
+
+    ESP_LOGI(TAG, "Start mDNS service");
+    ns_start_mdns();
+    ns_add_mdns("_http", "_tcp", 80);
+
+    ESP_LOGI(TAG, "Start HTTP server");
+    httpd_handle_t server = start_ap_select_web();
+
+    // wait until restart
+    ESP_LOGI(TAG, "Wait AP select ...");
+    xSemaphoreTake(restart_semaphore, portMAX_DELAY);
+    ESP_LOGI(TAG, "Selected AP");
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    if (server)
+    {
+        ESP_LOGI(TAG, "Stop HTTP server");
+        stop_ap_select_web(server);
+    }
+    ESP_LOGI(TAG, "Stop mDNS service");
+    ns_stop_mdns();
+
+    wifi_disconnect();
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[0]));
+    ap_select_mode = false;
+    stop_blink();
+}
+
+void wifi_set_ap(char *ssid, char *password)
+{
+    wifi_config_t wifi_config = {
+        .sta = {
+            .threshold.authmode = WIFI_AUTH_WPA2_PSK, // filter WPA2 access point
+            .pmf_cfg = {.capable = true, .required = false},
+        },
+    };
+    memcpy(wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
+    memcpy(wifi_config.sta.password, password, sizeof(wifi_config.sta.ssid));
+    if (strlen(password) == 0)
+        wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
+    wifi_ap_configs[0] = wifi_config;
+    // ESP_LOGI(TAG, "Connect to SSID: %s, Passphrase: %s",
+    //          wifi_ap_configs[0].sta.ssid, wifi_ap_configs[0].sta.password);
+    ESP_LOGI(TAG, "Connect to SSID: %s", wifi_ap_configs[0].sta.ssid);
+
+    xSemaphoreGive(restart_semaphore);
 }
