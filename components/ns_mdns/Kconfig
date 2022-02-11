@@ -1,0 +1,15 @@
+menu "NS mDNS Configuration"
+
+    config MDNS_HOSTNAME
+        string "mDNS Hostname"
+        default "esp32"
+        help
+            mDNS Hostname.
+
+    config MDNS_INSTANCE
+        string "mDNS Instance Name"
+        default "ESP32 IoT"
+        help
+            mDNS Instance Name
+
+endmenu
