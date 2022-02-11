@@ -20,10 +20,8 @@ void app_main(void)
     char temp_str[8];
 
     ESP_ERROR_CHECK(init_i2c_master());
-    ESP_LOGI(TAG, "I2C initialized successfully");
-
-    ESP_LOGI(TAG, "I2C initialized successfully");
     aqm0802a_init();
+    ESP_LOGI(TAG, "I2C initialized successfully");
 
 #if CONFIG_IDF_TARGET_ESP32C3
     temp_sensor_config_t internal_temp_sensor = {
