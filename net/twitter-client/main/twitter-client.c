@@ -57,10 +57,18 @@ void app_main(void)
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
         ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
 
+        strftime(strftime_buf, sizeof(strftime_buf), "Hello Ladies + Gentlemen, it's %c", &timeinfo);
         twitter_init_api_params();
-        twitter_set_api_param("status", "Hello Ladies + Gentlemen, a signed OAuth request!");
+        twitter_set_api_param("status", strftime_buf);
         twitter_set_api_param("include_entities", "true");
+        twitter_update_status();
 
+        vTaskDelay(pdMS_TO_TICKS(2 * 1000));
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "It's %c", &timeinfo);
+
+        twitter_init_api_params();
+        twitter_set_api_param("status", strftime_buf);
         twitter_update_status();
     }
     else
