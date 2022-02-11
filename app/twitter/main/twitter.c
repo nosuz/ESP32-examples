@@ -18,7 +18,6 @@
 static const char *TAG = "main";
 
 RTC_DATA_ATTR static int boot_count = 0;
-RTC_DATA_ATTR static time_t last_synced = 0;
 
 char tweet[TWEET_BUF_SIZE];
 
@@ -53,7 +52,7 @@ void app_main(void)
     nvs_init();
     config_gpio();
 
-    init_sntp();
+    init_sntp(3600);
 
     if (wifi_init())
     {
@@ -70,21 +69,9 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        // Get systemtime into `now` and set local time in `timeinfo`
+        start_sntp();
         time(&now);
         localtime_r(&now, &timeinfo);
-        if ((timeinfo.tm_year < (2016 - 1900)) || ((now - last_synced) > 3600))
-        {
-            ESP_LOGW(TAG, "Update systemtime.");
-            start_sntp();
-            time(&now);
-            localtime_r(&now, &timeinfo);
-            last_synced = now;
-        }
-        else
-        {
-            ESP_LOGI(TAG, "Skip updating systemtime.");
-        }
 
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
         ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
