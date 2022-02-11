@@ -1,6 +1,7 @@
 #include "ns_nvs.h"
 #include "ns_gpio.h"
 #include "ns_ap_select_web.h"
+#include "ns_mdns.h"
 
 int wifi_init(void);
 void wifi_connect(void);

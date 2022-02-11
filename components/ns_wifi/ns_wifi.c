@@ -400,6 +400,10 @@ void wifi_ap_select_mode(void)
 
     restart_semaphore = xSemaphoreCreateBinary();
 
+    ESP_LOGI(TAG, "Start mDNS service");
+    ns_start_mdns();
+    ns_add_mdns("_http", "_tcp", 80);
+
     ESP_LOGI(TAG, "Start HTTP server");
     httpd_handle_t server = start_ap_select_web();
 
@@ -414,6 +418,8 @@ void wifi_ap_select_mode(void)
         ESP_LOGI(TAG, "Stop HTTP server");
         stop_ap_select_web(server);
     }
+    ESP_LOGI(TAG, "Stop mDNS service");
+    ns_stop_mdns();
 
     wifi_disconnect();
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
