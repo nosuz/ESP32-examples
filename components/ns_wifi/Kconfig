@@ -12,32 +12,6 @@ menu "NS WiFi Configuration"
       help
          Access Point password
 
-config MAX_AP_CONNECT
-      int "Max connection size to AP"
-      range 0 8
-      default 3
-      help
-         Max number of connections to APs.
-
-config SCAN_AP_LIST_SIZE
-      int "Max scan AP list size"
-      range 0 20
-      default 10
-      help
-         Max number of detecting APs.
-
-    config ESP_WIFI_SSID
-        string "WiFi SSID"
-        default "myssid"
-        help
-            SSID (network name) to connect to.
-
-    config ESP_WIFI_PASSWORD
-        string "WiFi Password"
-        default "mypassword"
-        help
-            WiFi password (WPA or WPA2) to use.
-
    config TRIGER_PIN
        int "Triger GPIO to get into AP select mode"
         range 0 39 if IDF_TARGET_ESP32
@@ -63,11 +37,31 @@ config SCAN_AP_LIST_SIZE
         help
            Set GPIO number (IOxx) for LED.
 
+   config MAX_AP_CONNECT
+         int "Max connection size to AP"
+         range 0 8
+         default 3
+         help
+            Max number of connections to APs.
+
+   config SCAN_AP_LIST_SIZE
+         int "Max scan AP list size"
+         range 0 20
+         default 10
+         help
+            Max number of detecting APs.
+
     config AP_MAXIMUM_RETRY
        int "Maximum retry"
         default 3
         help
            Set the Maximum retry to try reconnecting to the AP.
+
+    config WEB_MOUNT_POINT
+        string "Website mount point in VFS"
+        default "/www"
+        help
+            Specify the mount point in VFS.
 
     config FORCE_ERASE_NVS
        bool "Erase NVS on every boot"

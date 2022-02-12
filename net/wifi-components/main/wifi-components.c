@@ -12,6 +12,7 @@ void app_main(void)
 {
     nvs_init();
     config_gpio();
+    init_spiffs();
 
     if (wifi_init() | pressed_triger())
     {
