@@ -2,13 +2,13 @@ menu "NS WiFi Configuration"
 
    config WIFI_AP_SSID
       string "AP SSID"
-      default "myssid"
+      default "ESP32"
       help
          Access Point name (SSID)
 
    config WIFI_AP_PASSWORD
       string "AP Password"
-      default "mypassword"
+      default "password"
       help
          Access Point password
 
