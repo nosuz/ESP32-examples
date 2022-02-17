@@ -537,7 +537,7 @@ void twitter_update_status(void)
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
     {
-        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
+        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
         // printf("%s\n", content.body);
