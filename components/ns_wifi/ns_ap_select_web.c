@@ -232,7 +232,7 @@ esp_err_t set_ap_handler(httpd_req_t *req)
         wifi_set_ap(ssid, password);
 
     /* Send a simple response */
-    const char resp[] = "URI POST Response";
+    const char resp[] = "Accepted Config";
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
