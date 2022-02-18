@@ -20,16 +20,6 @@ char *scratch;
 // From ESP32 example restfull_server
 #define CHECK_FILE_EXTENSION(filename, ext) (strcasecmp(&filename[strlen(filename) - strlen(ext)], ext) == 0)
 
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-// #include <sys/fcntl.h>
-// #include <unistd.h>
-// #include <ctype.h>
-// #include "esp_vfs.h"
-// #include <fnmatch.h>
-// #include "esp_spiffs.h"
-// void list_files(char *path, char *match);
-
 /* Set HTTP response content type according to file extension */
 static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filepath)
 {
@@ -204,24 +194,6 @@ esp_err_t set_ap_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    // size_t query_url_length = httpd_req_get_url_query_len(req);
-    // if (query_url_length > 0)
-    // {
-    //     char *query_buf = malloc(sizeof(char) * query_url_length + 1);
-    //     query_buf[query_url_length] = '\0';
-    //     ESP_LOGI(TAG, "Query URL Length: %d", query_url_length);
-
-    //     if (query_buf != NULL)
-    //     {
-    //         if (httpd_req_get_url_query_str(req, query_buf, query_url_length) == ESP_OK)
-    //         {
-    //             ESP_LOGI(TAG, "Query URL: %s", query_buf);
-    //             // httpd_query_key_value()
-    //         }
-    //         free(query_buf);
-    //     }
-    // }
-
     char ssid[64] = "";
     char password[64] = "";
 
@@ -351,81 +323,3 @@ void stop_ap_select_web(httpd_handle_t server)
         free(scratch);
     }
 }
-
-// void list_files(char *path, char *match)
-// {
-
-//     DIR *dir = NULL;
-//     struct dirent *ent;
-//     char type;
-//     char size[9];
-//     char tpath[255];
-//     char tbuffer[80];
-//     struct stat sb;
-//     struct tm *tm_info;
-//     char *lpath = NULL;
-//     int statok;
-
-//     printf("\nList of Directory [%s]\n", path);
-//     printf("-----------------------------------\n");
-//     // Open directory
-//     dir = opendir(path);
-//     if (!dir)
-//     {
-//         printf("Error opening directory\n");
-//         return;
-//     }
-
-//     // Read directory entries
-//     uint64_t total = 0;
-//     int nfiles = 0;
-//     printf("T  Size      Date/Time         Name\n");
-//     printf("-----------------------------------\n");
-//     while ((ent = readdir(dir)) != NULL)
-//     {
-//         sprintf(tpath, path);
-//         if (path[strlen(path) - 1] != '/')
-//             strcat(tpath, "/");
-//         strcat(tpath, ent->d_name);
-//         tbuffer[0] = '\0';
-
-//         if ((match == NULL) || (fnmatch(match, tpath, (FNM_PERIOD)) == 0))
-//         {
-//             // Get file stat
-//             statok = stat(tpath, &sb);
-
-//             if (statok == 0)
-//             {
-//                 tm_info = localtime(&sb.st_mtime);
-//                 strftime(tbuffer, 80, "%d/%m/%Y %R", tm_info);
-//             }
-//             else
-//                 sprintf(tbuffer, "                ");
-
-//             printf("%s  %s\r\n",
-//                    tbuffer,
-//                    ent->d_name);
-//         }
-//     }
-//     if (total)
-//     {
-//         printf("-----------------------------------\n");
-//         if (total < (1024 * 1024))
-//             printf("   %8d", (int)total);
-//         else if ((total / 1024) < (1024 * 1024))
-//             printf("   %6dKB", (int)(total / 1024));
-//         else
-//             printf("   %6dMB", (int)(total / (1024 * 1024)));
-//         printf(" in %d file(s)\n", nfiles);
-//     }
-//     printf("-----------------------------------\n");
-
-//     closedir(dir);
-
-//     free(lpath);
-
-//     uint32_t tot = 0, used = 0;
-//     esp_spiffs_info(NULL, &tot, &used);
-//     printf("SPIFFS: free %d KB of %d KB\n", (tot - used) / 1024, tot / 1024);
-//     printf("-----------------------------------\n\n");
-// }
