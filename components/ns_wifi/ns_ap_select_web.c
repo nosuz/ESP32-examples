@@ -226,8 +226,8 @@ esp_err_t set_ap_handler(httpd_req_t *req)
         }
     }
 
-    ESP_LOGI(TAG, "posted: %s", content);
-    ESP_LOGI(TAG, "SSID: %s", ssid);
+    // ESP_LOGI(TAG, "posted: %s", content);
+    ESP_LOGI(TAG, "Selected SSID: %s", ssid);
     if (strlen(ssid) > 0)
         wifi_set_ap(ssid, password);
 
@@ -251,7 +251,7 @@ esp_err_t get_ap_handler(httpd_req_t *req)
     for (int i = 0; i < ap_info_size; i++)
     {
         cJSON *info = cJSON_CreateObject();
-        ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
+        ESP_LOGI(TAG, "Return SSID \t%s", ap_info[i].ssid);
         cJSON_AddNumberToObject(info, "id", i);
         cJSON_AddStringToObject(info, "ssid", &ap_info[i].ssid);
         cJSON_AddNumberToObject(info, "rssi", ap_info[i].rssi);
@@ -260,7 +260,6 @@ esp_err_t get_ap_handler(httpd_req_t *req)
     cJSON_AddItemToObject(root, "ap", array);
 
     const char *json_data = cJSON_Print(root);
-    printf("%s\n", json_data);
     httpd_resp_sendstr(req, json_data);
 
     free(json_data);
