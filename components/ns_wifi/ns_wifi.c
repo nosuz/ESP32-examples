@@ -11,7 +11,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
-#include "esp_wifi.h"
 // #include "esp_wpa2.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -32,18 +31,21 @@ static EventGroupHandle_t s_wifi_event_group;
 
 static const char *TAG = "wifi";
 
-static wifi_config_t wifi_ap_configs[MAX_WPS_AP_CRED];
-static int s_ap_creds_num = 0;
-static int s_retry_num = 0;
-static bool wifi_stop_flag = false;
-static bool initialized_wifi = false;
-static bool started_wifi = false;
-static bool wps_in_progress = false;
-static bool ap_select_mode = false;
-static SemaphoreHandle_t restart_semaphore = NULL;
+wifi_config_t wifi_ap_configs[MAX_WPS_AP_CRED];
+int s_ap_creds_num = 0;
+int s_retry_num = 0;
+bool wifi_stop_flag = false;
+bool initialized_wifi = false;
+bool started_wifi = false;
+bool wps_in_progress = false;
+bool ap_select_mode = false;
+SemaphoreHandle_t restart_semaphore = NULL;
 
-static void wifi_event_handler(void *arg, esp_event_base_t event_base,
-                               int32_t event_id, void *event_data)
+uint16_t ap_count = 0;
+wifi_ap_record_t ap_info[CONFIG_SCAN_AP_LIST_SIZE];
+
+void wifi_event_handler(void *arg, esp_event_base_t event_base,
+                        int32_t event_id, void *event_data)
 {
     static int ap_idx = 1;
 
@@ -172,6 +174,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         // wifi_event_ap_stadisconnected_t *ap_event = (wifi_event_ap_stadisconnected_t *)event_data;
         // ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d",
         //          MAC2STR(ap_event->mac), ap_event->aid);
+        break;
+    case WIFI_EVENT_SCAN_DONE:
+        ESP_LOGI(TAG, "WIFI_EVENT_SCAN_DONE");
         break;
     default:
         ESP_LOGI(TAG, "event_base: WIFI_EVENT, id %d", event_id);
@@ -347,13 +352,9 @@ static void print_auth_mode(int authmode)
 void wifi_ap_select_mode(void)
 {
     ESP_LOGI(TAG, "start AP select mode.");
-    start_blink();
     ap_select_mode = true;
     esp_wifi_disconnect();
 
-    uint16_t number = CONFIG_SCAN_AP_LIST_SIZE;
-    wifi_ap_record_t ap_info[CONFIG_SCAN_AP_LIST_SIZE];
-    uint16_t ap_count = 0;
     memset(ap_info, 0, sizeof(ap_info));
 
     // without this statement, no IP address is provided.
@@ -384,11 +385,13 @@ void wifi_ap_select_mode(void)
 
     ESP_ERROR_CHECK(esp_wifi_start());
 
+    static const uint16_t ap_info_size = CONFIG_SCAN_AP_LIST_SIZE;
+
     // hold until scaning all channels.
     esp_wifi_scan_start(NULL, true);
-
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_info_size, ap_info));
+
     ESP_LOGI(TAG, "Total APs scanned = %u", ap_count);
     for (int i = 0; (i < CONFIG_SCAN_AP_LIST_SIZE) && (i < ap_count); i++)
     {
@@ -397,6 +400,9 @@ void wifi_ap_select_mode(void)
         print_auth_mode(ap_info[i].authmode);
         ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
     }
+
+    // ready to select
+    start_blink();
 
     restart_semaphore = xSemaphoreCreateBinary();
 
@@ -446,4 +452,11 @@ void wifi_set_ap(char *ssid, char *password)
     ESP_LOGI(TAG, "Connect to SSID: %s", wifi_ap_configs[0].sta.ssid);
 
     xSemaphoreGive(restart_semaphore);
+}
+
+wifi_ap_record_t *wifi_get_ap_info(uint16_t *info_size)
+{
+    *info_size = (ap_count < CONFIG_SCAN_AP_LIST_SIZE) ? ap_count : CONFIG_SCAN_AP_LIST_SIZE;
+
+    return ap_info;
 }
