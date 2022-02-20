@@ -43,10 +43,9 @@
   onMount(async () => {
     try {
       const res = await axios.get("/api/ap_list");
-      let ap_info = res.data;
-      console.log(ap_info);
-      if (ap_info.ap && ap_info.ap.length > 0) {
-        ap_list = ap_info.ap;
+      ap_list = res.data;
+      console.log(ap_list);
+      if (ap_list && ap_list.length > 0) {
         selected_ap = ap_list[0].ssid;
       }
     } catch (e) {
