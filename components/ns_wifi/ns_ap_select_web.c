@@ -245,7 +245,6 @@ esp_err_t get_ap_handler(httpd_req_t *req)
 
     wifi_ap_record_t *ap_info = wifi_get_ap_info(&ap_info_size);
 
-    cJSON *root = cJSON_CreateObject();
     cJSON *array = cJSON_CreateArray();
 
     for (int i = 0; i < ap_info_size; i++)
@@ -257,13 +256,12 @@ esp_err_t get_ap_handler(httpd_req_t *req)
         cJSON_AddNumberToObject(info, "rssi", ap_info[i].rssi);
         cJSON_AddItemToArray(array, info);
     }
-    cJSON_AddItemToObject(root, "ap", array);
 
-    const char *json_data = cJSON_Print(root);
+    const char *json_data = cJSON_Print(array);
     httpd_resp_sendstr(req, json_data);
 
     free(json_data);
-    cJSON_Delete(root);
+    cJSON_Delete(array);
 
     // list_files("/www", NULL);
     return ESP_OK;
