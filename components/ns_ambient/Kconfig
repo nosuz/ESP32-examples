@@ -1,0 +1,15 @@
+menu "NS Ambient"
+
+   config AMBIENT_CHANNEL_ID
+      string "Channel ID"
+      default 0
+      help
+         Channel ID
+
+   config AMBIENT_WRITE_KEY
+      string "Write Key"
+      default ""
+      help
+         Write key
+
+endmenu
