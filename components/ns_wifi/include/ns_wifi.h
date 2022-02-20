@@ -6,7 +6,7 @@
 #include "ns_ap_select_web.h"
 #include "ns_mdns.h"
 
-int wifi_init(void);
+esp_err_t wifi_init(void);
 void wifi_connect(void);
 // void wifi_wps_start(void);
 // void wifi_start_ap_select(void);

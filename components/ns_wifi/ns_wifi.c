@@ -131,10 +131,10 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[0]));
         }
         /*
-        * If only one AP credential is received from WPS, there will be no event data and
-        * esp_wifi_set_config() is already called by WPS modules for backward compatibility
-        * with legacy apps. So directly attempt connection here.
-        */
+         * If only one AP credential is received from WPS, there will be no event data and
+         * esp_wifi_set_config() is already called by WPS modules for backward compatibility
+         * with legacy apps. So directly attempt connection here.
+         */
         ESP_ERROR_CHECK(esp_wifi_wps_disable());
         wps_in_progress = false;
         stop_blink();
@@ -193,10 +193,16 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base,
     xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
 }
 
-int wifi_init(void)
+esp_err_t wifi_init(void)
 {
-    int nvs_error = 0;
+    bool start_ap_select = false;
 
+    ESP_LOGI(TAG, "Init another modules");
+    nvs_init();
+    config_gpio();
+    init_spiffs();
+
+    ESP_LOGI(TAG, "Start WiFi setup");
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
@@ -210,7 +216,7 @@ int wifi_init(void)
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
     if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
-        nvs_error = 1;
+        start_ap_select = true;
     ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
@@ -222,7 +228,13 @@ int wifi_init(void)
     initialized_wifi = true;
     ESP_LOGI(TAG, "wifi_init finished.");
 
-    return nvs_error;
+    if (start_ap_select | pressed_triger())
+    {
+        ESP_LOGW(TAG, "No AP info in NVS or Pressed triger button");
+        wifi_ap_select_mode();
+    }
+
+    return ESP_OK;
 }
 
 void wifi_connect(void)

@@ -10,15 +10,8 @@ static const char *TAG = "main";
 
 void app_main(void)
 {
-    nvs_init();
-    config_gpio();
-    init_spiffs();
-
-    if (wifi_init() | pressed_triger())
-    {
-        ESP_LOGW(TAG, "No AP info in NVS or Pressed triger button");
-        wifi_ap_select_mode();
-    }
+    ESP_LOGI(TAG, "Init Wifi");
+    wifi_init();
     ESP_LOGI(TAG, "Try to connect");
     wifi_connect();
 

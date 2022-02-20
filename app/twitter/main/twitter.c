@@ -49,22 +49,12 @@ void app_main(void)
     adt7410_read_temp(&adt7410_temp);
     shtc3_read_sensor(&shtc3_temp, &shtc3_humi);
 
-    nvs_init();
-    config_gpio();
-
     init_sntp(3600);
 
-    if (wifi_init())
-    {
-        // ESP_LOGW(TAG, "NVS error or cleared and start WPS.");
-        // wifi_wps_start();
-        ESP_LOGW(TAG, "NVS error or cleared.");
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Try to connect");
-        wifi_connect();
-    }
+    ESP_LOGI(TAG, "Init Wifi");
+    wifi_init();
+    ESP_LOGI(TAG, "Try to connect");
+    wifi_connect();
 
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
