@@ -20,6 +20,8 @@ Set correct Flash size in `Serial flasher config` menu.
 
 Copy partitions.csv into the project top directory.
 
+And don't forget to set correct flash memory size in `Serial flasher config`menu. At least 4MB flash memory is required.
+
 ## Erase NVS
 
 ```
