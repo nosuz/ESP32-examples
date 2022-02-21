@@ -274,12 +274,6 @@ void wifi_wps_start(void)
     ESP_ERROR_CHECK(esp_wifi_wps_start(0));
 }
 
-// void wifi_start_ap_select(void)
-// {
-//     ESP_LOGI(TAG, "Start AP select mode.");
-//     wifi_ap_select_mode();
-// }
-
 int wifi_wait_connection(void)
 {
     int connected = 0;
