@@ -16,6 +16,11 @@
 #include "esp_log.h"
 #include "esp_wps.h"
 
+#include "ns_nvs.h"
+#include "ns_gpio.h"
+#include "ns_spiffs.h"
+#include "ns_ap_select_web.h"
+
 #include "ns_wifi.h"
 
 #define WPS_MODE WPS_TYPE_PBC

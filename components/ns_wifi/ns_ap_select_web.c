@@ -7,6 +7,7 @@
 #include "cJSON.h"
 
 #include "ns_wifi.h"
+#include "ns_ap_select_web.h"
 
 #define BASE_DIR CONFIG_WEB_MOUNT_POINT
 
