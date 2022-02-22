@@ -17,11 +17,11 @@ RTC_DATA_ATTR static int boot_count = 0;
 
 void app_main(void)
 {
-    // uint32_t voltage = 0;
+    uint32_t voltage = 0;
     float battery = 5;
     float adt7410_temp = 0;
-    // float shtc3_temp = 0;
-    // float shtc3_humi = 0;
+    float shtc3_temp = 0;
+    float shtc3_humi = 0;
 
     ++boot_count;
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
@@ -29,12 +29,12 @@ void app_main(void)
     init_adc();
     init_i2c_master();
 
-    // read_adc_voltage(&voltage);
-    // battery = (float)voltage * 3 / 1000; // (100k + 200k) / 100k = 3
-    // printf("Battery: %0.2f V\n", battery);
+    read_adc_voltage(&voltage);
+    battery = (float)voltage * 3 / 1000; // (100k + 200k) / 100k = 3
+    printf("Battery: %0.2f V\n", battery);
 
     adt7410_read_temp(&adt7410_temp);
-    // shtc3_read_sensor(&shtc3_temp, &shtc3_humi);
+    shtc3_read_sensor(&shtc3_temp, &shtc3_humi);
 
     ESP_LOGI(TAG, "Init WiFi");
     wifi_init();
@@ -44,21 +44,18 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        // printf("室温1: %.01f℃, 室温2: %.01f℃, 湿度: %.0f%% "
-        //        "電圧: %.02fV "
-        //        "起動%d回目",
-        //        adt7410_temp,
-        //        shtc3_temp, shtc3_humi,
-        //        battery,
-        //        boot_count);
-        printf("室温: %.01f℃, 起動%d回目\n",
+        printf("室温1: %.01f℃, 室温2: %.01f℃, 湿度: %.0f%% "
+               "電圧: %.02fV "
+               "起動%d回目",
                adt7410_temp,
+               shtc3_temp, shtc3_humi,
+               battery,
                boot_count);
 
         ambient_set(1, adt7410_temp);
-        // ambient_set(2, shtc3_temp);
-        // ambient_set(3, shtc3_humi);
-        // ambient_set(4, battery);
+        ambient_set(2, shtc3_temp);
+        ambient_set(3, shtc3_humi);
+        ambient_set(4, battery);
 
         ambient_send();
     }
@@ -70,6 +67,7 @@ void app_main(void)
     wifi_disconnect();
 
     // Termination voltaege for Ni-MH is 1.0V and 4.0v for 4 batteries.
+    // Termination voltaege for Alkaline is 0.8V and 3.2v for 4 batteries. But some space are required for power supply.
     if (battery <= 4.0)
     {
         // never wakeup.
