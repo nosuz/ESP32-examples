@@ -1,0 +1,27 @@
+menu "NS Twitter OAuth 2.0 Client Configuration"
+
+    config TWITTER_CLIENT_ID
+        string "Clinet ID"
+        default ""
+        help
+            Set Client ID.
+
+    config TWITTER_CLIENT_SECRET
+        string "Client Secret"
+        default ""
+        help
+            Set client secret.
+
+    config TWITTER_REFHRESH_TOKEN
+        string "Initial refresh token"
+        default ""
+        help
+            Set initial refresh token.
+
+    config TWITTER_TOKEN_EXPIRE_TIME
+        int "Valid token duration"
+        default 7200
+        help
+            Token expires in this.
+
+endmenu
