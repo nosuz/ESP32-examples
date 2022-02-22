@@ -396,15 +396,17 @@ void wifi_ap_select_mode(void)
 
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    static const uint16_t ap_info_size = CONFIG_SCAN_AP_LIST_SIZE;
-
     // hold until scaning all channels.
+    ESP_LOGI(TAG, "AP scan start");
     esp_wifi_scan_start(NULL, true);
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_info_size, ap_info));
+    ESP_LOGI(TAG, "AP scan finished");
+
+    ap_count = CONFIG_SCAN_AP_LIST_SIZE;
+    // tell max size by ap_count arg and get actual number in it.
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_count, ap_info));
 
     ESP_LOGI(TAG, "Total APs scanned = %u", ap_count);
-    for (int i = 0; (i < CONFIG_SCAN_AP_LIST_SIZE) && (i < ap_count); i++)
+    for (int i = 0; i < ap_count; i++)
     {
         ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
         ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
