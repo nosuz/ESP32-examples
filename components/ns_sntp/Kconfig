@@ -8,7 +8,7 @@ menu "NS SNTP Configuration"
 
     config SNTP_SERVER
         string "SNTP Server Name"
-        default ntp.nict.jp
+        default "ntp.nict.jp"
         help
             Set an upstream server name.
 
