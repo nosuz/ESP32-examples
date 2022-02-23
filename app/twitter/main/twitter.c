@@ -37,7 +37,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
 
     // setenv("TZ", "JST-9", 1);
-    tzset();
+    // tzset();
 
     init_adc();
     init_i2c_master();
