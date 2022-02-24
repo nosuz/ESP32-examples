@@ -1,16 +1,24 @@
 menu "NS Twitter OAuth 2.0 Client Configuration"
 
+    config TWITTER_PRIVATE_CLIENT
+        bool "Private Client"
+        default false
+        help
+            Private client has a risk to expose Client Secret key.
+
     config TWITTER_CLIENT_ID
         string "Clinet ID"
         default ""
         help
             Set Client ID.
 
+if TWITTER_PRIVATE_CLIENT
     config TWITTER_CLIENT_SECRET
         string "Client Secret"
         default ""
         help
             Set client secret.
+endif
 
     config TWITTER_REFHRESH_TOKEN
         string "Initial refresh token"

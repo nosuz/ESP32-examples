@@ -37,8 +37,11 @@
 
 static const char *TAG = "twitter2";
 
-char *client_id;
+#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
 char *client_secret;
+#endif
+
+char *client_id;
 char *refresh_token;
 char *access_token;
 nvs_handle_t twitter_nvs_handle;
@@ -176,21 +179,6 @@ esp_err_t twitter2_refresh_token(void)
 {
     const char *url = "https://api.twitter.com/2/oauth2/token";
 
-    char *auth_param;
-    auth_param = malloc(strlen(client_id) + strlen(client_secret) + 2);
-    strcpy(auth_param, client_id);
-    strcat(auth_param, ":");
-    strcat(auth_param, client_secret);
-
-    char *encoded_auth_param = base64_encode((unsigned char *)auth_param, strlen(auth_param));
-    free(auth_param);
-
-    char *auth_header;
-    auth_header = malloc(strlen(BASIC_AUTH) + strlen(encoded_auth_param) + 1);
-    strcpy(auth_header, BASIC_AUTH);
-    strcat(auth_header, encoded_auth_param);
-    free(encoded_auth_param);
-
     char *post_data;
     post_data = malloc(strlen("grant_type=refresh_token") + strlen("refresh_token=") + strlen(refresh_token) + strlen("client_id=") + strlen(client_id) + 3);
     strcpy(post_data, "grant_type=refresh_token&refresh_token=");
@@ -214,10 +202,28 @@ esp_err_t twitter2_refresh_token(void)
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-    // POST
+#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
+    char *auth_param;
+    auth_param = malloc(strlen(client_id) + strlen(client_secret) + 2);
+    strcpy(auth_param, client_id);
+    strcat(auth_param, ":");
+    strcat(auth_param, client_secret);
+
+    char *encoded_auth_param = base64_encode((unsigned char *)auth_param, strlen(auth_param));
+    free(auth_param);
+
+    char *auth_header;
+    auth_header = malloc(strlen(BASIC_AUTH) + strlen(encoded_auth_param) + 1);
+    strcpy(auth_header, BASIC_AUTH);
+    strcat(auth_header, encoded_auth_param);
+    free(encoded_auth_param);
+
     esp_http_client_set_header(client, "Authorization", auth_header);
+#endif
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+    // POST
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
     {
@@ -275,9 +281,11 @@ esp_err_t twitter2_refresh_token(void)
     }
 
     esp_http_client_cleanup(client);
-    free(content.body);
+#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
     free(auth_header);
+#endif
     free(post_data);
+    free(content.body);
 
     return err;
 }
@@ -334,9 +342,13 @@ esp_err_t twitter2_init(void)
         strcpy(client_id, CLIENT_ID);
         nvs_set_str(twitter_nvs_handle, KEY_CLIENT_ID, client_id);
 
+#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
         client_secret = malloc(strlen(CLIENT_SECRET) + 1);
         strcpy(client_secret, CLIENT_SECRET);
         nvs_set_str(twitter_nvs_handle, KEY_CLIENT_SECRET, client_secret);
+#else
+        nvs_set_str(twitter_nvs_handle, KEY_CLIENT_SECRET, "");
+#endif
 
         nvs_set_str(twitter_nvs_handle, KEY_INIT_REFRESH_TOKEN, REFRESH_TOKEN);
 
@@ -354,9 +366,11 @@ esp_err_t twitter2_init(void)
             client_id = malloc(required_size);
             nvs_get_str(twitter_nvs_handle, KEY_CLIENT_ID, client_id, &required_size);
         }
+#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
         nvs_get_str(twitter_nvs_handle, KEY_CLIENT_SECRET, NULL, &required_size);
         client_secret = malloc(required_size);
         nvs_get_str(twitter_nvs_handle, KEY_CLIENT_SECRET, client_secret, &required_size);
+#endif
 
         nvs_get_str(twitter_nvs_handle, KEY_REFRESH_TOKEN, NULL, &required_size);
         refresh_token = malloc(required_size);
