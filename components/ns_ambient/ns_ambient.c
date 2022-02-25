@@ -114,10 +114,10 @@ void ambient_init(void)
     initilized_data = true;
 }
 
-esp_err_t ambient_set(int d, float value)
+esp_err_t ambient_set(unsigned int d, float value)
 {
     // d: 1 to 8
-    if (d > MAX_DATA || d <= 0)
+    if (d > MAX_DATA)
         return ESP_ERR_INVALID_ARG;
 
     if (!initilized_data)
