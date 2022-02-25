@@ -478,7 +478,7 @@ void twitter2_update_status(void)
     {
         cJSON_AddStringToObject(root, api_params[i].key, api_params[i].value);
     }
-    const char *post_data = cJSON_Print(root);
+    const char *post_data = cJSON_PrintUnformatted(root);
     // printf("%s", post_data);
 
     content_struct content = {

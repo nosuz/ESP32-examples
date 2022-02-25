@@ -258,7 +258,7 @@ esp_err_t get_ap_handler(httpd_req_t *req)
         cJSON_AddItemToArray(array, info);
     }
 
-    const char *json_data = cJSON_Print(array);
+    const char *json_data = cJSON_PrintUnformatted(array);
     httpd_resp_sendstr(req, json_data);
 
     free(json_data);

@@ -160,7 +160,7 @@ esp_err_t ambient_send(void)
     }
     cJSON_AddItemToObject(root, "data", array);
 
-    const char *json_data = cJSON_Print(root);
+    const char *json_data = cJSON_PrintUnformatted(root);
     ESP_LOGI(TAG, "%s", json_data);
 
     content_struct content = {
