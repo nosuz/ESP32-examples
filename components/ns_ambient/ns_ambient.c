@@ -33,7 +33,7 @@ typedef struct
 Ambient data[MAX_DATA];
 bool initilized_data = false;
 
-esp_err_t http_event_handler(esp_http_client_event_t *evt)
+esp_err_t http_ambient_event_handler(esp_http_client_event_t *evt)
 {
     switch (evt->event_id)
     {
@@ -145,8 +145,8 @@ esp_err_t ambient_send(void)
     cJSON_AddStringToObject(root, "writeKey", CONFIG_AMBIENT_WRITE_KEY);
 
     // set data
-    cJSON *array = cJSON_CreateArray();
-    char *index = "d?";
+    char index[] = "d?";
+    // cJSON *array = cJSON_CreateArray();
     // for (int i = 0; i < MAX_DATA; i++)
     // {
     //     if (data[i].valid)
@@ -180,7 +180,7 @@ esp_err_t ambient_send(void)
     esp_http_client_config_t config = {
         .url = url,
         // .transport_type = HTTP_TRANSPORT_OVER_SSL,
-        .event_handler = http_event_handler,
+        .event_handler = http_ambient_event_handler,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = &content,
         .method = HTTP_METHOD_POST,

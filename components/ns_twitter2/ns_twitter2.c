@@ -60,7 +60,7 @@ typedef struct content_struct
     char *body;
 } content_struct;
 
-esp_err_t http_event_handler(esp_http_client_event_t *evt)
+esp_err_t http_twitter_event_handler(esp_http_client_event_t *evt)
 {
     switch (evt->event_id)
     {
@@ -152,7 +152,7 @@ esp_err_t twitter2_refresh_token(void)
     esp_http_client_config_t config = {
         .url = url,
         // .transport_type = HTTP_TRANSPORT_OVER_SSL,
-        .event_handler = http_event_handler,
+        .event_handler = http_twitter_event_handler,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = &content,
         .method = HTTP_METHOD_POST,
@@ -430,7 +430,7 @@ void twitter2_update_status(void)
     esp_http_client_config_t config = {
         .url = url,
         // .transport_type = HTTP_TRANSPORT_OVER_SSL,
-        .event_handler = http_event_handler,
+        .event_handler = http_twitter_event_handler,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = &content,
         .method = HTTP_METHOD_POST,

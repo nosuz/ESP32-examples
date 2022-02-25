@@ -11,6 +11,7 @@
 #include "ns_wifi.h"
 #include "ns_sntp.h"
 #include "ns_twitter2.h"
+#include "ns_ambient.h"
 
 #define TWEET_BUF_SIZE 200
 #define STRFTIME_SIZE 64
@@ -18,6 +19,11 @@
 static const char *TAG = "main";
 
 RTC_DATA_ATTR static int boot_count = 0;
+
+RTC_DATA_ATTR static float highest_temp = 0;
+RTC_DATA_ATTR static float lowest_temp = 100;
+RTC_DATA_ATTR static bool tweeted_lowest_temp = false;
+RTC_DATA_ATTR static bool tweeted_highest_temp = false;
 
 char tweet[TWEET_BUF_SIZE];
 
@@ -27,24 +33,44 @@ void app_main(void)
     struct tm timeinfo;
     char strftime_buf[STRFTIME_SIZE];
 
-    // uint32_t voltage = 0;
-    float battery = 5;
+    uint32_t voltage = 0;
+    float battery = 0;
     float adt7410_temp = 0;
-    // float shtc3_temp = 0;
-    // float shtc3_humi = 0;
+    float shtc3_temp = 0;
+    float shtc3_humi = 0;
 
     ++boot_count;
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
 
+    set_local_timezone();
     init_adc();
     init_i2c_master();
 
-    // read_adc_voltage(&voltage);
-    // battery = (float)voltage * 3 / 1000; // (100k + 200k) / 100k = 3
-    // printf("Battery: %0.2f V\n", battery);
+    read_adc_voltage(&voltage);
+    battery = (float)voltage * 3 / 1000; // (100k + 200k) / 100k = 3
+    printf("Battery: %0.2f V\n", battery);
 
     adt7410_read_temp(&adt7410_temp);
-    // shtc3_read_sensor(&shtc3_temp, &shtc3_humi);
+    shtc3_read_sensor(&shtc3_temp, &shtc3_humi);
+
+    if (adt7410_temp > highest_temp)
+    {
+        highest_temp = adt7410_temp;
+    }
+    if (shtc3_temp > highest_temp)
+    {
+        highest_temp = shtc3_temp;
+    }
+
+    if (adt7410_temp < lowest_temp)
+    {
+        lowest_temp = adt7410_temp;
+    }
+
+    if (shtc3_temp < lowest_temp)
+    {
+        lowest_temp = shtc3_temp;
+    }
 
     ESP_LOGI(TAG, "Init Wifi");
     wifi_init();
@@ -54,45 +80,86 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        if (twitter2_init() == ESP_OK)
+        // update Ambient
+        printf("室温1: %.01f℃, 室温2: %.01f℃, 湿度: %.0f%% "
+               "電圧: %.02fV "
+               "起動%d回目\n",
+               adt7410_temp,
+               shtc3_temp, shtc3_humi,
+               battery,
+               boot_count);
+
+        ambient_set(1, adt7410_temp);
+        ambient_set(2, shtc3_temp);
+        ambient_set(3, shtc3_humi);
+        ambient_set(4, battery);
+        ambient_set(5, boot_count);
+
+        ambient_send();
+
+        // update daily lowestlowest temp.
+        // highest in April to November.
+
+        if (boot_count == 1)
+            twitter2_init();
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
+
+        if (timeinfo.tm_hour == 0)
         {
-            time(&now);
-            localtime_r(&now, &timeinfo);
-
-            strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-            ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
-
-            twitter2_api_init();
-
-            strftime(strftime_buf, sizeof(strftime_buf), "%H時%M分", &timeinfo);
-
-            // snprintf(tweet, TWEET_BUF_SIZE,
-            //          "自動更新(%d分毎): %s現在\n"
-            //          "室温1: %.01f℃, 室温2: %.01f℃, 湿度: %.0f%%\n"
-            //          "電圧: %.02fV\n"
-            //          "起動%d回目",
-            //          //  "Tweet from #ESP32",
-            //          CONFIG_SLEEP_LENGTH,
-            //          strftime_buf,
-            //          adt7410_temp,
-            //          shtc3_temp, shtc3_humi,
-            //          battery,
-            //          boot_count);
-            snprintf(tweet, TWEET_BUF_SIZE,
-                     "自動更新(%d分毎): %s現在\n"
-                     "室温: %.01f℃ 起動%d回目",
-                     CONFIG_SLEEP_LENGTH,
-                     strftime_buf,
-                     adt7410_temp,
-                     boot_count);
-            printf("%s\n", tweet);
-
-            twitter2_api_param("text", tweet);
-            twitter2_update_status();
+            // reset updated tweet
+            tweeted_lowest_temp = false;
+            tweeted_highest_temp = false;
         }
-        else
+
+        tweet[0] = '\0';
+        if (!tweeted_lowest_temp && (timeinfo.tm_hour == 7))
         {
-            ESP_LOGE(TAG, "Failed to init Twitter");
+            tweeted_lowest_temp = true;
+
+            snprintf(tweet, TWEET_BUF_SIZE,
+                     "今日(%d月%d日)の最低気温: %.01f℃\n"
+                     "現在の電圧: %.02fV\n"
+                     "起動%d回目",
+                     timeinfo.tm_mon + 1,
+                     timeinfo.tm_mday,
+                     lowest_temp,
+                     battery,
+                     boot_count);
+        }
+        else if (!tweeted_highest_temp && (timeinfo.tm_hour == 7))
+        {
+            tweeted_highest_temp = true;
+            if ((timeinfo.tm_mon >= 3) && (timeinfo.tm_mon <= 10))
+            {
+                snprintf(tweet, TWEET_BUF_SIZE,
+                         "今日(%d月%d日)の最高気温: %.01f℃\n"
+                         "現在の電圧: %.02fV\n"
+                         "起動%d回目",
+                         timeinfo.tm_mon + 1,
+                         timeinfo.tm_mday,
+                         highest_temp,
+                         battery,
+                         boot_count);
+            }
+        }
+
+        if (tweet[0] != '\0')
+        {
+            printf("Update status: %s\n", tweet);
+
+            if (twitter2_init() == ESP_OK)
+            {
+                twitter2_api_init();
+                twitter2_api_param("text", tweet);
+                twitter2_update_status();
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Failed to init Twitter");
+            }
         }
     }
     else
