@@ -23,12 +23,17 @@ void time_synced_callback(struct timeval *tv)
     xSemaphoreGive(sntp_semaphore);
 }
 
-void init_sntp(uint16_t sntp_interval)
+void set_local_timezone(void)
 {
-    ESP_LOGI(TAG, "Init SNTP");
     setenv("TZ", CONFIG_TIME_ZONE, 1);
     // setenv("TZ", "JST-9", 1);
     tzset();
+}
+
+void init_sntp(uint16_t sntp_interval)
+{
+    ESP_LOGI(TAG, "Init SNTP");
+    set_local_timezone();
 
 #ifdef LWIP_DHCP_GET_NTP_SRV
     /**
