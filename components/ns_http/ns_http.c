@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "ns_http.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -7,8 +6,9 @@
 #include "esp_event.h"
 #include "esp_tls.h"
 #include "esp_crt_bundle.h"
-
 #include "esp_http_client.h"
+
+#include "ns_http.h"
 
 #define BUFFER_BLOCK_SIZE (5 * 1024)
 
@@ -16,14 +16,7 @@ static const char *TAG = "http";
 
 // const char *pem_nosuz asm("_binary_wwww_nosuz_jp_pem_start");
 
-typedef struct content_struct
-{
-    int64_t size;
-    char *body;
-} content_struct;
-
-esp_err_t
-http_event_handler(esp_http_client_event_t *evt)
+esp_err_t ns_http_event_handler(esp_http_client_event_t *evt)
 {
     switch (evt->event_id)
     {
@@ -48,31 +41,29 @@ http_event_handler(esp_http_client_event_t *evt)
         // ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         if (evt->user_data == NULL)
             break;
-        content_struct *content = evt->user_data;
+        HTTP_CONTENT *content = evt->user_data;
         int64_t new_content_size = content->size + evt->data_len;
-        if (content->body != NULL)
+        // check the allocated memory size and expand it if needed.
+        int cur_block_size = (content->size + 1) / BUFFER_BLOCK_SIZE + 1;
+        int new_block_size = (new_content_size + 1) / BUFFER_BLOCK_SIZE + 1;
+        if (cur_block_size < new_block_size)
         {
-            // check the allocated memory size and expand it if needed.
-            int cur_block_size = (content->size + 1) / BUFFER_BLOCK_SIZE + 1;
-            int new_block_size = (new_content_size + 1) / BUFFER_BLOCK_SIZE + 1;
-            if (cur_block_size < new_block_size)
+            char *tmp = (char *)realloc(content->body, new_block_size * BUFFER_BLOCK_SIZE);
+            if (tmp != NULL)
             {
-                char *tmp = (char *)realloc(content->body, new_block_size * BUFFER_BLOCK_SIZE);
-                if (tmp != NULL)
-                {
-                    // ESP_LOGI(TAG, "Expanded to %d blocks.", new_block_size);
-                    content->body = tmp;
-                }
-                else
-                {
-                    ESP_LOGE(TAG, "Failed to realloc to %d blocks.", new_block_size);
-                    break;
-                }
+                // ESP_LOGI(TAG, "Expanded to %d blocks.", new_block_size);
+                content->body = tmp;
             }
-
-            memcpy(content->body + content->size, evt->data, evt->data_len);
-            content->body[new_content_size] = '\0';
+            else
+            {
+                ESP_LOGE(TAG, "Failed to realloc to %d blocks.", new_block_size);
+                break;
+            }
         }
+
+        memcpy(content->body + content->size, evt->data, evt->data_len);
+        content->body[new_content_size] = '\0';
+
         content->size = new_content_size;
 
         break;
@@ -93,25 +84,25 @@ http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-void ns_http_get(char *url)
+esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout)
 {
-    content_struct content = {
-        .size = 0,
-        .body = malloc(BUFFER_BLOCK_SIZE),
-    };
-
     esp_http_client_config_t config = {
         .url = url,
-        // .url = "https://www.nosuz.jp/",
-        // .url = "https://www.google.com/",
-
-        // .host = "www.yahoo.co.jp",
-        // .path = "/",
-        // .transport_type = HTTP_TRANSPORT_OVER_SSL,
-        .event_handler = http_event_handler,
+        .event_handler = ns_http_event_handler,
         .crt_bundle_attach = esp_crt_bundle_attach,
-        .user_data = &content,
+        .user_data = content,
     };
+    if (timeout > 0)
+        config.timeout_ms = timeout * 1000;
+
+    content->size = 0;
+    if (content->body != NULL)
+    {
+        free(content->body);
+        // content->body = NULL;
+    }
+    content->body = malloc(BUFFER_BLOCK_SIZE);
+
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
@@ -127,13 +118,13 @@ void ns_http_get(char *url)
         ESP_LOGI(
             TAG,
             "Content size: %lld",
-            content.size);
-        // printf("%s\n", content.body);
-        free(content.body);
+            content->size);
     }
     else
     {
         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
+
+    return err;
 }
