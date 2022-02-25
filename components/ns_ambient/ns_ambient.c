@@ -13,7 +13,8 @@
 
 #define MAX_DATA 8
 #define URL_BASE "http://ambidata.io/api/v2/channels/" CONFIG_AMBIENT_CHANNEL_ID
-#define SEND_NODE "/dataarray"
+// #define SEND_NODE "/dataarray"
+#define SEND_NODE "/data"
 
 static const char *TAG = "ambient";
 
@@ -145,20 +146,28 @@ esp_err_t ambient_send(void)
 
     // set data
     cJSON *array = cJSON_CreateArray();
-    char index[3] = "d";
-    index[2] = '\0';
+    char *index = "d?";
+    // for (int i = 0; i < MAX_DATA; i++)
+    // {
+    //     if (data[i].valid)
+    //     {
+    //         // sprintf(index, "d%d", i);
+    //         index[1] = '1' + i;
+    //         cJSON *d = cJSON_CreateObject();
+    //         cJSON_AddNumberToObject(d, index, data[i].value);
+    //         cJSON_AddItemToArray(array, d);
+    //     }
+    // }
+    // cJSON_AddItemToObject(root, "data", array);
     for (int i = 0; i < MAX_DATA; i++)
     {
         if (data[i].valid)
         {
             // sprintf(index, "d%d", i);
             index[1] = '1' + i;
-            cJSON *d = cJSON_CreateObject();
-            cJSON_AddNumberToObject(d, index, data[i].value);
-            cJSON_AddItemToArray(array, d);
+            cJSON_AddNumberToObject(root, index, data[i].value);
         }
     }
-    cJSON_AddItemToObject(root, "data", array);
 
     const char *json_data = cJSON_PrintUnformatted(root);
     ESP_LOGI(TAG, "%s", json_data);
