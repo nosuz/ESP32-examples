@@ -33,7 +33,6 @@
 #define KEY_LAST_REFRESHED "refreshed_at"
 
 // #define DEBUG
-#define BASIC_AUTH "Basic "
 
 static const char *TAG = "twitter2";
 
@@ -60,48 +59,6 @@ typedef struct content_struct
     int64_t size;
     char *body;
 } content_struct;
-
-// Basic Auth require Base64 encoding.
-static char encoding_table[] = {
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-    'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-    'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-    'w', 'x', 'y', 'z', '0', '1', '2', '3',
-    '4', '5', '6', '7', '8', '9', '+', '/'};
-static int mod_table[] = {0, 2, 1};
-
-char *base64_encode(unsigned char *data,
-                    uint16_t input_length)
-{
-    // binary data is acceptable. So, need to set input length as param.
-    uint16_t output_length = 4 * ((input_length + 2) / 3);
-    char *encoded_data = malloc(sizeof(char) * (output_length + 1));
-    if (encoded_data == NULL)
-        return NULL;
-
-    for (int i = 0, j = 0; i < input_length;)
-    {
-        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
-        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
-        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
-
-        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
-
-        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
-    }
-
-    for (int i = 0; i < mod_table[input_length % 3]; i++)
-        encoded_data[output_length - 1 - i] = '=';
-    encoded_data[output_length] = '\0';
-
-    return encoded_data;
-}
 
 esp_err_t http_event_handler(esp_http_client_event_t *evt)
 {
@@ -199,27 +156,14 @@ esp_err_t twitter2_refresh_token(void)
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = &content,
         .method = HTTP_METHOD_POST,
+#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
+        .auth_type = HTTP_AUTH_TYPE_BASIC,
+        .username = client_id,
+        .password = client_secret,
+#endif
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
-    char *auth_param;
-    auth_param = malloc(strlen(client_id) + strlen(client_secret) + 2);
-    strcpy(auth_param, client_id);
-    strcat(auth_param, ":");
-    strcat(auth_param, client_secret);
-
-    char *encoded_auth_param = base64_encode((unsigned char *)auth_param, strlen(auth_param));
-    free(auth_param);
-
-    char *auth_header;
-    auth_header = malloc(strlen(BASIC_AUTH) + strlen(encoded_auth_param) + 1);
-    strcpy(auth_header, BASIC_AUTH);
-    strcat(auth_header, encoded_auth_param);
-    free(encoded_auth_param);
-
-    esp_http_client_set_header(client, "Authorization", auth_header);
-#endif
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
 
@@ -281,9 +225,6 @@ esp_err_t twitter2_refresh_token(void)
     }
 
     esp_http_client_cleanup(client);
-#ifdef CONFIG_TWITTER_PRIVATE_CLIENT
-    free(auth_header);
-#endif
     free(post_data);
     free(content.body);
 
