@@ -184,6 +184,7 @@ esp_err_t ambient_send(void)
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = &content,
         .method = HTTP_METHOD_POST,
+        .timeout_ms = 30 * 1000, // 30sec.
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
