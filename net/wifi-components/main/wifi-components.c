@@ -23,7 +23,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        ns_http_get("https://www.yahoo.co.jp", &content, 0);
+        ns_http_get("https://www.yahoo.co.jp", 0, &content);
         if (content.body != NULL)
         {
             free(content.body);
@@ -32,7 +32,7 @@ void app_main(void)
 
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        ns_http_get("https://www.google.com/", NULL, 0);
+        ns_http_get("https://www.google.com/", 0, NULL);
 
         wifi_disconnect();
         ESP_LOGI(TAG, "Disconnected");

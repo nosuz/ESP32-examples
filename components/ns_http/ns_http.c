@@ -84,13 +84,104 @@ esp_err_t ns_http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout_sec)
+esp_err_t ns_http_send_request(esp_http_client_config_t *config, char *post_content_type, char *post_data)
+{
+    HTTP_CONTENT *content;
+    content = config->user_data;
+    if (content != NULL)
+    {
+        content->size = 0;
+        if (content->body != NULL)
+        {
+            free(content->body);
+            content->body = NULL;
+        }
+        content->body = malloc(BUFFER_BLOCK_SIZE);
+    }
+
+    esp_http_client_handle_t client = esp_http_client_init(config);
+    if (post_content_type != NULL)
+        esp_http_client_set_header(client, "Content-Type", post_content_type);
+    if (post_data != NULL)
+        esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK)
+    {
+        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d",
+                 esp_http_client_get_status_code(client),
+                 esp_http_client_get_content_length(client));
+        // if (content != NULL)
+        //     printf("%s\n", content.body)
+    }
+    else
+    {
+        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
+    }
+
+    // cleanup
+    esp_http_client_cleanup(client);
+
+    return err;
+}
+
+esp_err_t ns_http_get(char *url, unsigned int timeout_sec, HTTP_CONTENT *content)
 {
     esp_http_client_config_t config = {
         .url = url,
         .event_handler = ns_http_event_handler,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = content,
+        .method = HTTP_METHOD_GET,
+    };
+    if (timeout_sec > 0)
+        config.timeout_ms = timeout_sec * 1000;
+
+    esp_err_t err = ns_http_send_request(&config, NULL, NULL);
+    return err;
+}
+
+esp_err_t ns_http_post(char *url, unsigned int timeout_sec, char *post_content_type, char *post_data, HTTP_CONTENT *content)
+{
+    esp_http_client_config_t config = {
+        .url = url,
+        .event_handler = ns_http_event_handler,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .user_data = content,
+        .method = HTTP_METHOD_POST,
+    };
+    if (timeout_sec > 0)
+        config.timeout_ms = timeout_sec * 1000;
+
+    return ns_http_send_request(&config, post_content_type, post_data);
+}
+
+esp_err_t ns_http_auth_basic_post(char *url, char *user_name, char *password, unsigned int timeout_sec, char *post_content_type, char *post_data, HTTP_CONTENT *content)
+{
+    esp_http_client_config_t config = {
+        .url = url,
+        .event_handler = ns_http_event_handler,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .user_data = content,
+        .method = HTTP_METHOD_POST,
+        .auth_type = HTTP_AUTH_TYPE_BASIC,
+        .username = user_name,
+        .password = password,
+    };
+    if (timeout_sec > 0)
+        config.timeout_ms = timeout_sec * 1000;
+
+    return ns_http_send_request(&config, post_content_type, post_data);
+}
+
+esp_err_t ns_http_auth_bearer_post(char *url, char *bearer_token, unsigned int timeout_sec, char *post_content_type, char *post_data, HTTP_CONTENT *content)
+{
+    esp_http_client_config_t config = {
+        .url = url,
+        .event_handler = ns_http_event_handler,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .user_data = content,
+        .method = HTTP_METHOD_POST,
     };
     if (timeout_sec > 0)
         config.timeout_ms = timeout_sec * 1000;
@@ -107,25 +198,34 @@ esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout_sec
     }
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
+    if (post_content_type != NULL)
+        esp_http_client_set_header(client, "Content-Type", post_content_type);
+    if (post_data != NULL)
+        esp_http_client_set_post_field(client, post_data, strlen(post_data));
 
+    char *auth_header;
+    auth_header = malloc(strlen("Bearer ") + strlen(bearer_token) + 1);
+    strcpy(auth_header, "Bearer ");
+    strcat(auth_header, bearer_token);
+    esp_http_client_set_header(client, "Authorization", auth_header);
+
+    esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
     {
-        int64_t content_length = esp_http_client_get_content_length(client);
-        ESP_LOGI(
-            TAG,
-            "HTTPS Status = %d, content_length = %lld",
-            esp_http_client_get_status_code(client),
-            content_length);
-
-        if (content != NULL)
-            ESP_LOGI(TAG, "Content size: %lld", content->size);
+        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d",
+                 esp_http_client_get_status_code(client),
+                 esp_http_client_get_content_length(client));
+        // if (content != NULL)
+        //     printf("%s\n", content.body)
     }
     else
     {
-        ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
     }
+
+    // cleanup
     esp_http_client_cleanup(client);
+    free(auth_header);
 
     return err;
 }
