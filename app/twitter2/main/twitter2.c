@@ -129,7 +129,7 @@ void app_main(void)
                      battery,
                      boot_count);
         }
-        else if (!tweeted_highest_temp && (timeinfo.tm_hour == 7))
+        else if (!tweeted_highest_temp && (timeinfo.tm_hour == 19))
         {
             tweeted_highest_temp = true;
             if ((timeinfo.tm_mon >= 3) && (timeinfo.tm_mon <= 10))
