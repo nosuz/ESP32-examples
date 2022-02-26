@@ -84,7 +84,7 @@ esp_err_t ns_http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout)
+esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout_sec)
 {
     esp_http_client_config_t config = {
         .url = url,
@@ -92,8 +92,8 @@ esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout)
         .crt_bundle_attach = esp_crt_bundle_attach,
         .user_data = content,
     };
-    if (timeout > 0)
-        config.timeout_ms = timeout * 1000;
+    if (timeout_sec > 0)
+        config.timeout_ms = timeout_sec * 1000;
 
     if (content != NULL)
     {
