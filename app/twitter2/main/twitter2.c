@@ -95,8 +95,6 @@ void app_main(void)
         ambient_set(4, battery);
         ambient_set(5, boot_count);
 
-        ambient_send();
-
         // update daily lowestlowest temp.
         // highest in April to November.
 
@@ -117,10 +115,10 @@ void app_main(void)
         tweet[0] = '\0';
         if (!tweeted_lowest_temp && (timeinfo.tm_hour == 7))
         {
-            tweeted_lowest_temp = true;
+            ambient_set(6, lowest_temp);
 
             snprintf(tweet, TWEET_BUF_SIZE,
-                     "今日(%d月%d日)の最低室温: %.01f℃\n"
+                     "%d月%d日\n過去24時間の最低室温: %.01f℃\n"
                      "現在の電圧: %.02fV\n"
                      "起動%d回目 #ESP32",
                      timeinfo.tm_mon + 1,
@@ -129,14 +127,16 @@ void app_main(void)
                      battery,
                      boot_count);
             lowest_temp = 100;
+            tweeted_lowest_temp = true;
         }
         else if (!tweeted_highest_temp && (timeinfo.tm_hour == 19))
         {
-            tweeted_highest_temp = true;
+            ambient_set(7, highest_temp);
+
             if ((timeinfo.tm_mon >= 3) && (timeinfo.tm_mon <= 10))
             {
                 snprintf(tweet, TWEET_BUF_SIZE,
-                         "今日(%d月%d日)の最高室温: %.01f℃\n"
+                         "%d月%d日\n過去24時間の最高室温: %.01f℃\n"
                          "現在の電圧: %.02fV\n"
                          "起動%d回目 #ESP32",
                          timeinfo.tm_mon + 1,
@@ -145,8 +145,13 @@ void app_main(void)
                          battery,
                          boot_count);
             }
+
             highest_temp = 0;
+            tweeted_highest_temp = true;
         }
+
+        // send data to ambidata.io
+        ambient_send();
 
         if (tweet[0] != '\0')
         {
