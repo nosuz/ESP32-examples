@@ -171,7 +171,10 @@ void app_main(void)
 
     wifi_disconnect();
 
-    // Termination voltaege for Ni-MH is 1.0V and 4.0v for 4 batteries.
+    // Termination voltaege for Ni-MH is 1.0V and 4.0V with 4 batteries.
+    // The termination volatge of alkari battery is 0.8V and 3.2V with 4 batteries.
+    // But this is lower than required volatage to make 3.3V.
+    // So, I will make this stop working when that also reached to 4.0V.
     if (battery <= 4.0)
     {
         // never wakeup.
@@ -182,7 +185,7 @@ void app_main(void)
     {
         ESP_LOGI(TAG, "Entering deep sleep for %d min.", CONFIG_SLEEP_LENGTH);
         esp_sleep_enable_timer_wakeup(1000000LL * CONFIG_SLEEP_LENGTH * 60);
-        // esp_deep_sleep(1000000LL * SLEEP_MIN);
+        // esp_deep_sleep(1000000LL * SLEEP_SEC);
     }
     esp_deep_sleep_start();
 }
