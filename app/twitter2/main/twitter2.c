@@ -122,7 +122,7 @@ void app_main(void)
             snprintf(tweet, TWEET_BUF_SIZE,
                      "今日(%d月%d日)の最低気温: %.01f℃\n"
                      "現在の電圧: %.02fV\n"
-                     "起動%d回目",
+                     "起動%d回目 #ESP32",
                      timeinfo.tm_mon + 1,
                      timeinfo.tm_mday,
                      lowest_temp,
@@ -138,7 +138,7 @@ void app_main(void)
                 snprintf(tweet, TWEET_BUF_SIZE,
                          "今日(%d月%d日)の最高気温: %.01f℃\n"
                          "現在の電圧: %.02fV\n"
-                         "起動%d回目",
+                         "起動%d回目 #ESP32",
                          timeinfo.tm_mon + 1,
                          timeinfo.tm_mday,
                          highest_temp,
