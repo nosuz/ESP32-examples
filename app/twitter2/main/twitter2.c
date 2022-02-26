@@ -128,6 +128,7 @@ void app_main(void)
                      lowest_temp,
                      battery,
                      boot_count);
+            lowest_temp = 100;
         }
         else if (!tweeted_highest_temp && (timeinfo.tm_hour == 19))
         {
@@ -144,6 +145,7 @@ void app_main(void)
                          battery,
                          boot_count);
             }
+            highest_temp = 0;
         }
 
         if (tweet[0] != '\0')
