@@ -32,12 +32,7 @@ void app_main(void)
 
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        ns_http_get("https://www.google.com/", &content, 0);
-        if (content.body != NULL)
-        {
-            free(content.body);
-            content.body = NULL;
-        }
+        ns_http_get("https://www.google.com/", NULL, 0);
 
         wifi_disconnect();
         ESP_LOGI(TAG, "Disconnected");

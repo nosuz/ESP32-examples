@@ -95,13 +95,16 @@ esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout)
     if (timeout > 0)
         config.timeout_ms = timeout * 1000;
 
-    content->size = 0;
-    if (content->body != NULL)
+    if (content != NULL)
     {
-        free(content->body);
-        // content->body = NULL;
+        content->size = 0;
+        if (content->body != NULL)
+        {
+            free(content->body);
+            // content->body = NULL;
+        }
+        content->body = malloc(BUFFER_BLOCK_SIZE);
     }
-    content->body = malloc(BUFFER_BLOCK_SIZE);
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -115,10 +118,8 @@ esp_err_t ns_http_get(char *url, HTTP_CONTENT *content, unsigned int timeout)
             esp_http_client_get_status_code(client),
             content_length);
 
-        ESP_LOGI(
-            TAG,
-            "Content size: %lld",
-            content->size);
+        if (content != NULL)
+            ESP_LOGI(TAG, "Content size: %lld", content->size);
     }
     else
     {
