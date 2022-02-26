@@ -35,8 +35,8 @@ esp_err_t adt7410_read_temp(float *temp)
     i2c_master_write_byte(cmd, ADT7410_TEMP_MSB, ACK_EN);
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (ADT7410_ADDR << 1) | I2C_MASTER_READ, ACK_EN);
-    i2c_master_read_byte(cmd, &i2c_data.data.high, I2C_MASTER_NACK);
-    i2c_master_read_byte(cmd, &i2c_data.data.low, I2C_MASTER_ACK);
+    i2c_master_read_byte(cmd, &i2c_data.data.high, I2C_MASTER_ACK);
+    i2c_master_read_byte(cmd, &i2c_data.data.low, I2C_MASTER_NACK);
     i2c_master_stop(cmd);
     // Execute and return status, should return 0
     ret = i2c_master_cmd_begin(CONFIG_I2C_PORT, cmd, pdMS_TO_TICKS(1000));
