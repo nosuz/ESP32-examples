@@ -120,7 +120,7 @@ void app_main(void)
             tweeted_lowest_temp = true;
 
             snprintf(tweet, TWEET_BUF_SIZE,
-                     "今日(%d月%d日)の最低気温: %.01f℃\n"
+                     "今日(%d月%d日)の最低室温: %.01f℃\n"
                      "現在の電圧: %.02fV\n"
                      "起動%d回目 #ESP32",
                      timeinfo.tm_mon + 1,
@@ -136,7 +136,7 @@ void app_main(void)
             if ((timeinfo.tm_mon >= 3) && (timeinfo.tm_mon <= 10))
             {
                 snprintf(tweet, TWEET_BUF_SIZE,
-                         "今日(%d月%d日)の最高気温: %.01f℃\n"
+                         "今日(%d月%d日)の最高室温: %.01f℃\n"
                          "現在の電圧: %.02fV\n"
                          "起動%d回目 #ESP32",
                          timeinfo.tm_mon + 1,
