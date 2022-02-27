@@ -97,7 +97,9 @@ esp_err_t ambient_send(void)
     ESP_LOGI(TAG, "%s", json_data);
 
     // POST
-    ns_http_post(url, 30, "application/json", json_data, NULL);
+    HTTP_STRUCT *http = ns_http_post(url, "application/json", json_data, strlen(json_data));
+    ns_http_set_timeout(http, 30);
+    ns_http_send(http, NULL);
     free(json_data);
     cJSON_Delete(root);
     free(url);

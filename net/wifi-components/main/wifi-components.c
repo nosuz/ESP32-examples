@@ -10,10 +10,7 @@ static const char *TAG = "main";
 
 void app_main(void)
 {
-    HTTP_CONTENT content = {
-        .size = 0,
-        .body = NULL,
-    };
+    HTTP_CONTENT content = ns_http_default_content();
 
     ESP_LOGI(TAG, "Init Wifi");
     wifi_init();
@@ -23,16 +20,13 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        ns_http_get("https://www.yahoo.co.jp", 0, &content);
-        if (content.body != NULL)
-        {
-            free(content.body);
-            content.body = NULL;
-        }
+        ns_http_send(ns_http_get("https://www.yahoo.co.jp"), &content);
+        ns_http_content_cleanup(&content);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        ns_http_get("https://www.google.com/", 0, NULL);
+        HTTP_STRUCT *http = ns_http_get("https://www.google.com/");
+        ns_http_send(http, NULL);
 
         wifi_disconnect();
         ESP_LOGI(TAG, "Disconnected");

@@ -61,16 +61,13 @@ esp_err_t twitter2_refresh_token(void)
     strcat(post_data, client_id);
     // ESP_LOGI(TAG, "Refresh Token param: %s", post_data);
 
-    HTTP_CONTENT content = {
-        .size = 0,
-        .body = NULL,
-    };
-
+    HTTP_STRUCT *http = ns_http_post(url, "application/x-www-form-urlencoded", post_data, strlen(post_data));
 #ifdef CONFIG_TWITTER_PRIVATE_CLIENT
-    esp_err_t err = ns_http_auth_basic_post(url, client_id, client_secret, 0, "application/x-www-form-urlencoded", post_data, &content);
-#else
-    esp_err_t err = ns_http_post(url, 0, "application/x-www-form-urlencoded", post_data, &content);
+    ns_http_auth_basic(http, client_id, client_secret);
 #endif
+
+    HTTP_CONTENT content = ns_http_default_content();
+    esp_err_t err = ns_http_send(http, &content);
     if (err == ESP_OK)
     {
         cJSON *new_access_token = NULL;
@@ -314,7 +311,9 @@ void twitter2_update_status(void)
     // printf("%s", post_data);
 
     // POST
-    ns_http_auth_bearer_post(url, access_token, 0, "application/json", post_data, NULL);
+    HTTP_STRUCT *http = ns_http_post(url, "application/json", post_data, strlen(post_data));
+    ns_http_auth_bearer(http, access_token);
+    ns_http_send(http, NULL);
 
     cJSON_Delete(root);
 }
