@@ -2,7 +2,7 @@ menu "NS Ambient"
 
    config AMBIENT_CHANNEL_ID
       string "Channel ID"
-      default 0
+      default "0"
       help
          Channel ID
 
