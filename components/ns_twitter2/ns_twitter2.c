@@ -122,7 +122,7 @@ esp_err_t twitter2_refresh_token(void)
     }
 
     free(post_data);
-    free(content.body);
+    ns_http_content_cleanup(&content);
 
     return err;
 }
