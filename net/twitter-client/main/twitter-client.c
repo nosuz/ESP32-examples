@@ -20,39 +20,19 @@ void app_main(void)
     struct tm timeinfo;
     char strftime_buf[64];
 
-    nvs_init();
-    config_gpio();
-
-    init_sntp();
-
-    if (wifi_init())
-    {
-        ESP_LOGW(TAG, "NVS error or cleared and start WPS.");
-        wifi_wps_start();
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Try to connect");
-        wifi_connect();
-    }
+    ESP_LOGI(TAG, "Init Wifi");
+    wifi_init();
+    ESP_LOGI(TAG, "Try to connect");
+    wifi_connect();
 
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
         // Get systemtime into `now` and set local time in `timeinfo`
+        ESP_LOGW(TAG, "Update systemtime.");
+        init_sntp(3600);
+        start_sntp();
         time(&now);
-        localtime_r(&now, &timeinfo);
-        if (timeinfo.tm_year < (2016 - 1900))
-        {
-            ESP_LOGW(TAG, "Update systemtime.");
-            start_sntp();
-            time(&now);
-        }
-        else
-        {
-            ESP_LOGI(TAG, "Skip updating systemtime.");
-        }
-
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
         ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
@@ -77,9 +57,4 @@ void app_main(void)
     }
 
     wifi_disconnect();
-
-    while (1)
-    {
-        vTaskDelay(pdMS_TO_TICKS(5 * 1000));
-    }
 }
