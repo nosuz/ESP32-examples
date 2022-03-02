@@ -27,6 +27,7 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | I2C 温度湿度センサー SHTC3         | I2C 接続の温度湿度センサーの読み取りモジュール。                                                   | [i2c/read_shtc3](i2c/read_shtc3)                         |
 | I2C 温度湿度センサー SHT40         | I2C 接続の温度湿度センサーの読み取りモジュール。                                                   | [i2c/read_sht40](i2c/read_sht40)                         |
 | バッテリー駆動ボードサンプル       | 電池で動くボードのステータスを自動ツイートする。                                                   | [app/twitter](app/twitter)                               |
+| Deep Sleap サンプル                | Deep Sleep から GPIO またはタッチで復帰するサンプル。                                              | [gpio/deep-sleep](gpio/deep-sleep)                       |
 
 ## 使用方法
 

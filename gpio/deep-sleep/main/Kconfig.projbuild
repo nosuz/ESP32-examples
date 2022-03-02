@@ -1,0 +1,58 @@
+menu "Deep Sleep Sample"
+
+   choice
+      prompt "Wakeup Source"
+      default WAKEUP_GPIO
+
+      config WAKEUP_GPIO
+         bool "Wakeup by GPIO"
+
+      config WAKEUP_TOUCH
+         bool "Wakeup by Touchpad"
+
+   endchoice
+
+if WAKEUP_GPIO
+   config TRIGER_PIN
+      int "Wakeup Triger GPIO"
+      range 0 39 if IDF_TARGET_ESP32
+      range 0 21 if IDF_TARGET_ESP32C3
+      range 0 48 if IDF_TARGET_ESP32S3
+      default 15 if IDF_TARGET_ESP32
+      default 0 if IDF_TARGET_ESP32S3
+      help
+         Set triger GPIO number(IOxx) to wakeup. This GPIO also must be RTC_GPIO.
+endif
+
+if WAKEUP_TOUCH
+   config TOUCH_PAD
+      int "Wakeup Touchpad (TOUCHx)"
+      range 0 9 if IDF_TARGET_ESP32
+      range 0 14 if IDF_TARGET_ESP32S3
+      default 0
+      help
+         Set touch pad number (TOUCHx) to wakeup.
+endif
+
+   config WAKEUP_TIMER
+      bool "Wakeup Timer"
+      default true
+
+if WAKEUP_TIMER
+   config SLEEP_DURATION
+      int "Sleep duration (sec)"
+      range 1 3600
+      default 30
+endif
+
+   config LED_PIN
+      int "GPIO connected to LED"
+      range 0 39 if IDF_TARGET_ESP32
+      range 0 21 if IDF_TARGET_ESP32C3
+      range 0 48 if IDF_TARGET_ESP32S3
+      default 2 if IDF_TARGET_ESP32
+      default 45 if IDF_TARGET_ESP32S3
+      help
+         Set GPIO number (IOxx) for LED.
+
+endmenu
