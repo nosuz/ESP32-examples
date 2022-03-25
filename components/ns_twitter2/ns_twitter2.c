@@ -260,7 +260,7 @@ exit_refresh_token:
     return err;
 }
 
-void twitter2_api_init(void)
+void twitter2_api_params_init(void)
 {
     for (int i = 0; i < param_index; i++)
     {

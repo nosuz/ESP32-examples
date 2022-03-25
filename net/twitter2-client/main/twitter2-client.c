@@ -23,7 +23,7 @@ void app_main(void)
     {
         if (twitter2_init() == ESP_OK)
         {
-            twitter2_api_init();
+            twitter2_api_params_init();
             twitter2_api_param("text", "本日は晴天なり。");
             twitter2_update_status();
         }
