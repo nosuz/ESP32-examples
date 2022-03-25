@@ -199,12 +199,12 @@ esp_err_t twitter2_init(void)
             nvs_get_str(twitter_nvs_handle, KEY_CLIENT_ID, NULL, &required_size);
             client_id = malloc(required_size);
             nvs_get_str(twitter_nvs_handle, KEY_CLIENT_ID, client_id, &required_size);
-        }
 #ifdef CONFIG_TWITTER_PRIVATE_CLIENT
-        nvs_get_str(twitter_nvs_handle, KEY_CLIENT_SECRET, NULL, &required_size);
-        client_secret = malloc(required_size);
-        nvs_get_str(twitter_nvs_handle, KEY_CLIENT_SECRET, client_secret, &required_size);
+            nvs_get_str(twitter_nvs_handle, KEY_CLIENT_SECRET, NULL, &required_size);
+            client_secret = malloc(required_size);
+            nvs_get_str(twitter_nvs_handle, KEY_CLIENT_SECRET, client_secret, &required_size);
 #endif
+        }
 
         nvs_get_str(twitter_nvs_handle, KEY_REFRESH_TOKEN, NULL, &required_size);
         refresh_token = malloc(required_size);
