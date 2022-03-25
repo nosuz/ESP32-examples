@@ -32,12 +32,12 @@
 static const char *TAG = "twitter2";
 
 #ifdef CONFIG_TWITTER_PRIVATE_CLIENT
-char *client_secret;
+static char *client_secret;
 #endif
 
-char *client_id;
-char *refresh_token;
-char *access_token;
+static char *client_id;
+static char *refresh_token;
+static char *access_token;
 nvs_handle_t twitter_nvs_handle;
 
 typedef struct
@@ -46,7 +46,7 @@ typedef struct
     char *value;
 } TWITTER_API_PARAM;
 
-int param_index = 0;
+static int param_index = 0;
 TWITTER_API_PARAM api_params[MAX_PARAMS];
 
 esp_err_t twitter2_refresh_token(void)
