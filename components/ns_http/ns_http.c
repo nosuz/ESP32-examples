@@ -262,8 +262,11 @@ void ns_http_content_cleanup(HTTP_CONTENT *content)
 {
     if (content != NULL)
     {
-        free(content->body);
-        content->body = NULL;
+        if (content->body != NULL)
+        {
+            free(content->body);
+            content->body = NULL;
+        }
         content->size = 0;
     }
 }
