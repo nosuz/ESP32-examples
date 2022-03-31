@@ -29,11 +29,11 @@ esp_err_t ns_http_event_handler(esp_http_client_event_t *evt)
         ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
         break;
     case HTTP_EVENT_ON_HEADER:
-        // ESP_LOGI(
-        //     TAG,
-        //     "HTTP_EVENT_ON_HEADER, key=%s, value=%s",
-        //     evt->header_key,
-        //     evt->header_value);
+        ESP_LOGD(
+            TAG,
+            "HTTP_EVENT_ON_HEADER, key=%s, value=%s",
+            evt->header_key,
+            evt->header_value);
         break;
     case HTTP_EVENT_ON_DATA:
         // Can handle both pages having Content-Length and chunked pages.
@@ -79,6 +79,8 @@ esp_err_t ns_http_event_handler(esp_http_client_event_t *evt)
             ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
         }
         break;
+    default:
+        ESP_LOGD(TAG, "UNKNOWN HTTP EVENT: %d", evt->event_id);
     }
     return ESP_OK;
 }
@@ -190,12 +192,16 @@ esp_err_t ns_http_send(HTTP_STRUCT *http, HTTP_CONTENT *content)
     header = http->header;
     while (header != NULL)
     {
+        ESP_LOGD(TAG, "Header: %s -> %s", header->key, header->value);
         esp_http_client_set_header(client, header->key, header->value);
-        // ESP_LOGI(TAG, "Header: %s -> %s", header->key, header->value);
         header = header->next;
     }
     if (http->post_data != NULL)
+    {
+        ESP_LOGD(TAG, "POST: %s", http->post_data);
+        // ESP_LOG_BUFFER_HEXDUMP(TAG, http->post_data, http->data_size, ESP_LOG_DEBUG);
         esp_http_client_set_post_field(client, http->post_data, http->data_size);
+    }
 
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
