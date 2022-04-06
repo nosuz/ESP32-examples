@@ -58,7 +58,7 @@ esp32 <- read_sheet(config$ESP32_SHEET)
 
 ```{r}
 esp32 %>% 
-  ggplot(aes(x=DATE_TTIME, y=BATTERY_VOLT)) +
+  ggplot(aes(x=DATE_TIME, y=BATTERY_VOLT)) +
   geom_point() + 
   #geom_line() +
   #scale_colour_viridis_d() + 
@@ -74,8 +74,8 @@ esp32 %>%
 
 start_point <- now() - ddays(1)
 esp32_minimax %>% 
-  filter(DATE_TTIME >= start_point) %>% 
-  ggplot(aes(x=DATE_TTIME, y=TEMP, color=SENSOR)) +
+  filter(DATE_TIME >= start_point) %>% 
+  ggplot(aes(x=DATE_TIME, y=TEMP, color=SENSOR)) +
   geom_point() + 
   geom_line() +
   scale_colour_viridis_d(option = "cividis") + 
@@ -83,7 +83,7 @@ esp32_minimax %>%
   theme_bw()
 
 esp32_minimax %>% 
-  ggplot(aes(x=DATE_TTIME, y=TEMP, color=SENSOR)) +
+  ggplot(aes(x=DATE_TIME, y=TEMP, color=SENSOR)) +
   geom_point() + 
   geom_line() +
   scale_colour_viridis_d(option = "cividis") + 
@@ -97,7 +97,7 @@ esp32_minimax %>%
 ```{r}
 esp32 %>% 
   pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") %>%
-  mutate(DATE = floor_date(DATE_TTIME, unit="day")) %>% 
+  mutate(DATE = floor_date(DATE_TIME, unit="day")) %>% 
   group_by(DATE) %>% 
   slice(which.min(TEMP)) %>% 
   ggplot(aes(x=DATE, y=TEMP)) +
@@ -112,7 +112,7 @@ esp32 %>%
 ```{r}
 esp32 %>% 
   pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") %>%
-  mutate(DATE = floor_date(DATE_TTIME, unit="day")) %>% 
+  mutate(DATE = floor_date(DATE_TIME, unit="day")) %>% 
   group_by(DATE) %>% 
   summarise(TEMP_MIN = min(TEMP), TEMP_MAX=max(TEMP)) %>% 
   ungroup() %>% 
@@ -139,7 +139,7 @@ errors %>%
             median = median(DELTA))
 
 errors %>% 
-  ggplot(aes(x=DATE_TTIME, y=DELTA)) +
+  ggplot(aes(x=DATE_TIME, y=DELTA)) +
   geom_point()
 
 errors %>% 
@@ -153,7 +153,7 @@ errors %>%
 
 ```{r}
 esp32 %>% 
-  ggplot(aes(x=DATE_TTIME, y=SHTC30_HUMI)) +
+  ggplot(aes(x=DATE_TIME, y=SHTC30_HUMI)) +
   geom_point() + 
   geom_line() +
   #scale_colour_viridis_d() + 
@@ -165,7 +165,7 @@ esp32 %>%
 
 ```{r}
 esp32 %>% 
-  ggplot(aes(x=DATE_TTIME, y=BOOT_COUNT)) +
+  ggplot(aes(x=DATE_TIME, y=BOOT_COUNT)) +
   geom_point() + 
   #scale_colour_viridis_d() + 
   #scale_color_viridis(discrete=TRUE) + 
