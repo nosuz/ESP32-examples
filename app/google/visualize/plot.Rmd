@@ -70,13 +70,26 @@ esp32 %>%
 
 ```{r}
 esp32 %>% 
-  pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") %>% 
+  pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") -> esp32_minimax
+
+start_point <- now() - ddays(1)
+esp32_minimax %>% 
+  filter(DATE_TTIME >= start_point) %>% 
   ggplot(aes(x=DATE_TTIME, y=TEMP, color=SENSOR)) +
   geom_point() + 
   geom_line() +
   scale_colour_viridis_d(option = "cividis") + 
   #scale_color_viridis(discrete=TRUE) + 
   theme_bw()
+
+esp32_minimax %>% 
+  ggplot(aes(x=DATE_TTIME, y=TEMP, color=SENSOR)) +
+  geom_point() + 
+  geom_line() +
+  scale_colour_viridis_d(option = "cividis") + 
+  #scale_color_viridis(discrete=TRUE) + 
+  theme_bw()
+
 ```
 
 ### 最低気温
