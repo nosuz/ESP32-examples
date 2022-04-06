@@ -1,7 +1,7 @@
 ---
 title: "自宅の温度と湿度"
 author: "NosuZ"
-date: "2022/3/29"
+date: "`r Sys.Date()`"
 output: html_document
 ---
 ```{r setup, include=FALSE}
