@@ -31,7 +31,7 @@ void app_main(void)
         // Get systemtime into `now` and set local time in `timeinfo`
         ESP_LOGW(TAG, "Update systemtime.");
         init_sntp(3600);
-        start_sntp();
+        sync_sntp();
         time(&now);
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);

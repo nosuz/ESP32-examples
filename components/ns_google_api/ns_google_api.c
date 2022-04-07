@@ -129,7 +129,7 @@ esp_err_t google_api_init(void)
 {
     init_sntp(3600);
     // update system clock
-    start_sntp();
+    sync_sntp();
 
     esp_err_t err = nvs_open("google", NVS_READWRITE, &google_nvs_handle);
     if (err != ESP_OK)

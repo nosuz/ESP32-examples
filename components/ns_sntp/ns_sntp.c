@@ -48,15 +48,10 @@ void init_sntp(uint16_t sntp_interval)
     sntp_set_time_sync_notification_cb(time_synced_callback);
     // sntp_set_sync_interval(interval); // default once per hour.
     interval = sntp_interval;
+    sntp_set_sync_interval(sntp_interval * 1000); // set as ms
 }
 
-void stop_sntp(void)
-{
-    ESP_LOGI(TAG, "Stop SNTP");
-    sntp_stop();
-}
-
-void start_sntp(void)
+void sync_sntp(void)
 {
     time_t now;
     struct tm timeinfo;
@@ -91,4 +86,29 @@ void start_sntp(void)
     }
 
     stop_sntp();
+}
+
+void start_sntp(void)
+{
+    // Start SNPT service and update system time every specified intervals.
+    sntp_semaphore = xSemaphoreCreateBinary();
+
+    ESP_LOGI(TAG, "Start SNTP");
+    sntp_init();
+    // wait for time to be set
+    ESP_LOGI(TAG, "Waiting for system time to be set");
+    if (xSemaphoreTake(sntp_semaphore, pdMS_TO_TICKS(20 * 1000)) == pdTRUE)
+    {
+        ESP_LOGI(TAG, "Updated system time");
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Failed to set systemtime");
+    }
+}
+
+void stop_sntp(void)
+{
+    ESP_LOGI(TAG, "Stop SNTP");
+    sntp_stop();
 }

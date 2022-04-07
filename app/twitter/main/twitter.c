@@ -59,7 +59,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Wait connection");
     if (wifi_wait_connection())
     {
-        start_sntp();
+        sync_sntp();
         time(&now);
         localtime_r(&now, &timeinfo);
 

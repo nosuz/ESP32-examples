@@ -128,7 +128,7 @@ esp_err_t twitter2_init(void)
 {
     init_sntp(3600);
     // update system clock
-    start_sntp();
+    sync_sntp();
 
     esp_err_t err = nvs_open("twitter2", NVS_READWRITE, &twitter_nvs_handle);
     if (err != ESP_OK)
