@@ -54,6 +54,10 @@ read_sheet(config$ESP32_SHEET) %>%
   # tzone = "JST" not worked.
   mutate(DATE_TIME = force_tz(DATE_TIME,tzone = "Asia/Tokyo")) -> esp32
 #View(esp32)
+
+esp32 %>% 
+  pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") -> esp32_temp
+
 ```
 
 ## バッテリー電圧
@@ -71,11 +75,8 @@ esp32 %>%
 ## 室温
 
 ```{r}
-esp32 %>% 
-  pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") -> esp32_minimax
-
-start_point <- now() - ddays(1)
-esp32_minimax %>% 
+start_point <- now() - hours(36)
+esp32_temp %>% 
   filter(DATE_TIME >= start_point) %>% 
   ggplot(aes(x=DATE_TIME, y=TEMP, color=SENSOR)) +
   geom_point() + 
@@ -84,7 +85,7 @@ esp32_minimax %>%
   #scale_color_viridis(discrete=TRUE) + 
   theme_bw()
 
-esp32_minimax %>% 
+esp32_temp %>% 
   ggplot(aes(x=DATE_TIME, y=TEMP, color=SENSOR)) +
   geom_point() + 
   geom_line() +
@@ -97,8 +98,7 @@ esp32_minimax %>%
 ### 最低気温
 
 ```{r}
-esp32 %>% 
-  pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") %>%
+esp32_temp %>% 
   mutate(DATE = floor_date(DATE_TIME, unit="day")) %>% 
   group_by(DATE) %>% 
   slice(which.min(TEMP)) %>% 
@@ -112,8 +112,7 @@ esp32 %>%
 ### 最高室温と最低室温
 
 ```{r}
-esp32 %>% 
-  pivot_longer(cols = c(ADT7410_TEMP, SHTC30_TEMP), names_to = "SENSOR", values_to = "TEMP") %>%
+esp32_temp %>% 
   mutate(DATE = floor_date(DATE_TIME, unit="day")) %>% 
   group_by(DATE) %>% 
   summarise(TEMP_MIN = min(TEMP), TEMP_MAX=max(TEMP)) %>% 
