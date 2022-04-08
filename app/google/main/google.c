@@ -19,6 +19,9 @@
 #define STRFTIME_SIZE 64
 #define VOLTS_HIST 3
 
+#define TWEET_LOWEST_AT 7
+#define TWEET_HIGHEST_AT 19
+
 static const char *TAG = "main";
 
 RTC_DATA_ATTR static int boot_count = 0;
@@ -52,6 +55,9 @@ void app_main(void)
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
 
     set_local_timezone();
+    time(&now);
+    localtime_r(&now, &timeinfo);
+
     init_adc();
     init_i2c_master();
 
@@ -80,23 +86,30 @@ void app_main(void)
     adt7410_read_temp(&adt7410_temp);
     shtc3_read_sensor(&shtc3_temp, &shtc3_humi);
 
-    if (adt7410_temp > highest_temp)
+    if (timeinfo.tm_hour < TWEET_LOWEST_AT)
     {
-        highest_temp = adt7410_temp;
-    }
-    if (shtc3_temp > highest_temp)
-    {
-        highest_temp = shtc3_temp;
+        if (adt7410_temp < lowest_temp)
+        {
+            lowest_temp = adt7410_temp;
+        }
+
+        if (shtc3_temp < lowest_temp)
+        {
+            lowest_temp = shtc3_temp;
+        }
     }
 
-    if (adt7410_temp < lowest_temp)
+    if (timeinfo.tm_hour < TWEET_HIGHEST_AT)
     {
-        lowest_temp = adt7410_temp;
-    }
+        if (adt7410_temp > highest_temp)
+        {
+            highest_temp = adt7410_temp;
+        }
 
-    if (shtc3_temp < lowest_temp)
-    {
-        lowest_temp = shtc3_temp;
+        if (shtc3_temp > highest_temp)
+        {
+            highest_temp = shtc3_temp;
+        }
     }
 
     ESP_LOGI(TAG, "Init Wifi");
@@ -185,10 +198,10 @@ void app_main(void)
             tweeted_highest_temp = false;
         }
 
-        if (!tweeted_lowest_temp && (timeinfo.tm_hour == 7))
+        if (!tweeted_lowest_temp && (timeinfo.tm_hour == TWEET_LOWEST_AT))
         {
             snprintf(tweet, TWEET_BUF_SIZE,
-                     "%d月%d日\n過去24時間の最低室温: %.01f℃\n"
+                     "%d月%d日\n今朝の最低室温: %.01f℃\n"
                      "現在の電圧: %.02fV\n"
                      "起動%d回目 #ESP32",
                      timeinfo.tm_mon + 1,
@@ -199,10 +212,10 @@ void app_main(void)
             lowest_temp = 100;
             tweeted_lowest_temp = true;
         }
-        else if (!tweeted_highest_temp && (timeinfo.tm_hour == 19))
+        else if (!tweeted_highest_temp && (timeinfo.tm_hour == TWEET_HIGHEST_AT))
         {
             snprintf(tweet, TWEET_BUF_SIZE,
-                     "%d月%d日\n過去24時間の最高室温: %.01f℃\n"
+                     "%d月%d日\n今日の最高室温: %.01f℃\n"
                      "現在の電圧: %.02fV\n"
                      "起動%d回目 #ESP32",
                      timeinfo.tm_mon + 1,
