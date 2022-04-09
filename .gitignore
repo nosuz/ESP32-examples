@@ -1,8 +1,9 @@
 build/
 sdkconfig
-sdkconfig.old
-*~
+sdkconfig.*
 .vscode/
 client_secret.json
 .config.yaml
 .Rproj.user
+.Rhistory
+*~
