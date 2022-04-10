@@ -82,7 +82,7 @@ void sync_sntp(void)
     else
     {
         ESP_LOGI(TAG, "Skip updating systemtime.");
-        xSemaphoreGive(sntp_semaphore);
+        // xSemaphoreGive(sntp_semaphore);
     }
 
     stop_sntp();
