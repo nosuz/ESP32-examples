@@ -323,3 +323,23 @@ void google_shreadsheet_append(const char *spreadsheet_id, const char *sheet_ran
 
     free(url);
 }
+
+void gmail_create_draft(const char *message)
+{
+    const char *url = "https://gmail.googleapis.com/upload/gmail/v1/users/me/drafts";
+
+    // POST
+    HTTP_STRUCT *http = ns_http_post(url, "message/rfc822", message, strlen(message));
+    ns_http_auth_bearer(http, access_token);
+    ns_http_send(http, NULL);
+}
+
+void gmail_send(const char *message)
+{
+    const char *url = "https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send";
+
+    // POST
+    HTTP_STRUCT *http = ns_http_post(url, "message/rfc822", message, strlen(message));
+    ns_http_auth_bearer(http, access_token);
+    ns_http_send(http, NULL);
+}
