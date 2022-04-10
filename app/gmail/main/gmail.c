@@ -10,7 +10,8 @@
 
 #define STRFTIME_SIZE 64
 
-#define MESSAGE "To: nosuzuki@postcard.st\nSubject: test =?utf-8?B?5pel5pys6Kqe44Gu44Oh44O844Or?=\nContent-Type: text/plain\n\nThis is a test message.\n日本語のメールはOK?\n\n"
+#define HEADER "To: nosuzuki@postcard.st\nSubject: test =?utf-8?B?5pel5pys6Kqe44Gu44Oh44O844Or?=\nContent-Type: text/plain\n"
+#define BODY "This is a test message.\n日本語のメールはOK?\n\n"
 
 static const char *TAG = "main";
 
@@ -20,7 +21,8 @@ void app_main(void)
     struct tm timeinfo;
     char strftime_buf[STRFTIME_SIZE];
     char *message;
-    message = malloc(strlen(MESSAGE) + STRFTIME_SIZE + 2); // +2 for "\n\0"
+    // +1 for separator between HEADER and BODY, +2 for "\n\0"
+    message = malloc(strlen(HEADER) + strlen("DATE: ") + STRFTIME_SIZE + strlen(BODY) + STRFTIME_SIZE + 3);
     if (message == NULL)
         ESP_LOGE(TAG, "Failed malloc for message");
 
@@ -38,10 +40,16 @@ void app_main(void)
 
             time(&now);
             localtime_r(&now, &timeinfo);
-            strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+
+            gmaile_formatdate(strftime_buf, sizeof(strftime_buf), &timeinfo);
             ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
 
-            strcpy(message, MESSAGE);
+            strcpy(message, HEADER);
+            // Date field is overwriten by Google. So does not need to set date field.
+            strcat(message, "Date: ");
+            strcat(message, strftime_buf);
+            strcat(message, "\n\n");
+            strcat(message, BODY);
             strcat(message, strftime_buf);
             strcat(message, "\n");
             ESP_LOGI(TAG, "Mail: %s", message);
@@ -52,10 +60,16 @@ void app_main(void)
 
             time(&now);
             localtime_r(&now, &timeinfo);
+
+            gmaile_formatdate(strftime_buf, sizeof(strftime_buf), &timeinfo);
+            strcpy(message, HEADER);
+            strcat(message, "Date: ");
+            strcat(message, strftime_buf);
+            strcat(message, "\n\n");
+            strcat(message, BODY);
+
             strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
             ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
-
-            strcpy(message, MESSAGE);
             strcat(message, strftime_buf);
             strcat(message, "\n");
             ESP_LOGI(TAG, "Mail: %s", message);

@@ -324,6 +324,12 @@ void google_shreadsheet_append(const char *spreadsheet_id, const char *sheet_ran
     free(url);
 }
 
+void gmaile_formatdate(char *strftime_buf, size_t length, struct tm *timeinfo)
+{
+    // %T = %H:%M:%S
+    strftime(strftime_buf, length, "%a, %d %b %Y %T %z", timeinfo);
+}
+
 void gmail_create_draft(const char *message)
 {
     const char *url = "https://gmail.googleapis.com/upload/gmail/v1/users/me/drafts";
