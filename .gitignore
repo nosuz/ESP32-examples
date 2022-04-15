@@ -6,4 +6,5 @@ client_secret.json
 .config.yaml
 .Rproj.user
 .Rhistory
+.Rdata
 *~
