@@ -1,0 +1,73 @@
+---
+title: "IR Reciever output sample"
+author: "nosuz"
+date: '2022-04-15'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+#library(stringr)
+#library(openxlsx)
+library(readr)
+#library(readxl)
+#library(writexl)
+#library(qwraps2)
+#library(janitor)
+#library(kableExtra)
+#library(ggthemes)
+#library(ggsci)
+# https://github.com/thomasp85/scico/issues/2
+#library(scico)
+# ggplot has default viridis
+# https://ggplot2.tidyverse.org/reference/scale_viridis.html
+##library(viridis)
+
+#library(Epi) # 95% CI for chisq.test
+
+##library(DBI)
+#library(odbc)
+#library(googlesheets4)
+
+#library(whisker) # Mustache syntax
+#library(mondate)
+
+#library(slider) # 移動平均
+#library(ggh4x) # dnorm line on ggplot
+
+select <- dplyr::select
+
+```
+
+```{r}
+data_11_001 <- read_csv("data_11_001.csv") %>% 
+  mutate(CH1 = CH1 / 1000)
+#View(data_11_001)
+```
+
+```{r}
+data_11_001 %>% 
+  filter(index > 4000, index < 8000) %>% 
+  ggplot(aes(x=index, y=CH1)) + 
+  geom_line()
+```
+
+```{r}
+library(DT)
+data_11_001 %>%
+  mutate(delta = abs(CH1 - lag(CH1, 1))) %>% 
+  filter(delta > 2) %>% 
+  mutate(dt = index - lag(index, 1)) %>% 
+  mutate(width = if_else(dt < 60, "s", "L", "-")) %>% 
+  datatable()
+
+
+
+```
+
