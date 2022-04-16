@@ -13,9 +13,6 @@ typedef struct
     int off;
 } IR_PULSE;
 
-static void pack_ir_data(cJSON *root, IR_PULSE *ir_pulses, size_t pulses);
-static void raw_ir_data(cJSON *root, IR_PULSE *ir_pulses, size_t pulses);
-
 char *encode_ir_pulses(rmt_item32_t *items, size_t length)
 {
     int unit = 0;
@@ -37,8 +34,6 @@ char *encode_ir_pulses(rmt_item32_t *items, size_t length)
     char *json_data = NULL;
     if (pulses > 0)
     {
-        cJSON *root = cJSON_CreateObject();
-
         ESP_LOGI(TAG, "-----------------------------------");
         ESP_LOGI(TAG, "Unit: %d, Data pulses: %d", unit, pulses);
 
@@ -56,96 +51,56 @@ char *encode_ir_pulses(rmt_item32_t *items, size_t length)
 
         if (ir_pulses[0].on < ir_pulses[0].off)
         {
-            ESP_LOGI(TAG, "Ignored. Maybe Noise");
-        }
-        else if ((ir_pulses[0].on >= 13) && (ir_pulses[0].off >= 6))
-        {
-            ESP_LOGI(TAG, "NEC format");
-            // 950nm, 38kHz, duty 1:2, leader ON 16 and OFF 8
-            cJSON_AddStringToObject(root, "formt", "NEC");
-            cJSON_AddFalseToObject(root, "repeat");
-            pack_ir_data(root, ir_pulses, pulses);
-        }
-        else if ((ir_pulses[0].on >= 13) && (ir_pulses[0].off >= 3) && (pulses == 1))
-        {
-            ESP_LOGI(TAG, "NEC format (Repeated)");
-            // 950nm, 38kHz, duty 1:2, ON 16 and OFF 4 followed by 1 ON
-            cJSON_AddStringToObject(root, "formt", "NEC");
-            cJSON_AddTrueToObject(root, "repeat");
-        }
-        else if ((ir_pulses[0].on >= 6) && (ir_pulses[0].off >= 2))
-        {
-            ESP_LOGI(TAG, "AEHA format");
-            // 950nm, 38kHz, duty 1:2, leader ON 8 and  OFF 4
-            cJSON_AddStringToObject(root, "formt", "AEHA");
-            cJSON_AddFalseToObject(root, "repeat");
-            pack_ir_data(root, ir_pulses, pulses);
-        }
-        else if ((ir_pulses[0].on >= 6) && (ir_pulses[0].off >= 6) && (pulses == 1))
-        {
-            ESP_LOGI(TAG, "AEHA format (Repeated");
-            // 950nm, 38kHz, duty 1:2, ON 8 and OFF 8 followed by 1 ON
-            cJSON_AddStringToObject(root, "formt", "AEHA");
-            cJSON_AddTrueToObject(root, "repeat");
+            ESP_LOGI(TAG, "Ignore noise");
         }
         else
         {
-            ESP_LOGI(TAG, "Unkown format");
-            cJSON_AddStringToObject(root, "formt", "raw");
-            cJSON_AddFalseToObject(root, "repeat");
-            raw_ir_data(root, ir_pulses, pulses);
-        }
-        cJSON_AddNumberToObject(root, "unit", unit);
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddNumberToObject(root, "unit", unit);
+            cJSON_AddNumberToObject(root, "pulses", pulses - 1);
 
-        free(ir_pulses);
-        json_data = cJSON_PrintUnformatted(root);
-        cJSON_Delete(root);
-    }
+            cJSON *item = cJSON_CreateObject();
+            cJSON_AddItemToObject(item, "on", cJSON_CreateNumber(ir_pulses[0].on));
+            cJSON_AddItemToObject(item, "off", cJSON_CreateNumber(ir_pulses[0].off));
+            cJSON_AddItemToObject(root, "leader", item);
 
-    return json_data;
-}
+            cJSON *array = cJSON_CreateArray();
 
-static void pack_ir_data(cJSON *root, IR_PULSE *ir_pulses, size_t pulses)
-{
-    uint8_t data = 0;
-    int pointer = 1;
-    int bit = 0;
+            uint8_t data = 0;
+            int pointer = 1;
+            int bit = 0;
+            int mark = 1;
 
-    cJSON *array = cJSON_CreateArray();
-    while (1)
-    {
-        if (ir_pulses[pointer++].off > 1)
-            data |= (1 << bit);
+            while (pointer < pulses)
+            {
+                if (ir_pulses[pointer].off > mark)
+                    mark = ir_pulses[pointer].off;
 
-        if (pointer >= pulses)
-        {
-            ESP_LOGI(TAG, "%02x", data);
-            cJSON_AddItemToArray(array, cJSON_CreateNumber(data));
-            break;
-        }
-        else
-        {
-            bit = (bit + 1) % 8;
-            if (bit == 0)
+                if (ir_pulses[pointer++].off > 1)
+                    data |= (1 << bit);
+
+                bit = (bit + 1) % 8;
+                if (bit == 0)
+                {
+                    ESP_LOGI(TAG, "%02x", data);
+                    cJSON_AddItemToArray(array, cJSON_CreateNumber(data));
+                    data = 0;
+                }
+            }
+            if (bit != 0)
             {
                 ESP_LOGI(TAG, "%02x", data);
                 cJSON_AddItemToArray(array, cJSON_CreateNumber(data));
-                data = 0;
             }
-        }
-    }
-    cJSON_AddItemToObject(root, "data", array);
-}
+            cJSON_AddItemToObject(root, "data", array);
+            cJSON_AddNumberToObject(root, "mark", mark);
 
-static void raw_ir_data(cJSON *root, IR_PULSE *ir_pulses, size_t pulses)
-{
-    cJSON *array = cJSON_CreateArray();
-    for (int i = 0; i < pulses; i++)
-    {
-        cJSON *item = cJSON_CreateObject();
-        cJSON_AddItemToObject(item, "on", cJSON_CreateNumber(ir_pulses[i].on));
-        cJSON_AddItemToObject(item, "off", cJSON_CreateNumber(ir_pulses[i].off));
-        cJSON_AddItemToArray(array, item);
+            json_data = cJSON_PrintUnformatted(root);
+            cJSON_Delete(root);
+        }
+
+        free(ir_pulses);
     }
-    cJSON_AddItemToObject(root, "pulses", array);
+
+    return json_data;
 }
