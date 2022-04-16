@@ -54,7 +54,11 @@ char *encode_ir_pulses(rmt_item32_t *items, size_t length)
                      items[i].duration1, ir_pulses[i].off);
         }
 
-        if ((ir_pulses[0].on >= 13) && (ir_pulses[0].off >= 6))
+        if (ir_pulses[0].on < ir_pulses[0].off)
+        {
+            ESP_LOGI(TAG, "Ignored. Maybe Noise");
+        }
+        else if ((ir_pulses[0].on >= 13) && (ir_pulses[0].off >= 6))
         {
             ESP_LOGI(TAG, "NEC format");
             // 950nm, 38kHz, duty 1:2, leader ON 16 and OFF 8
