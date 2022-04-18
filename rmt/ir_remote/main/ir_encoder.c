@@ -53,6 +53,10 @@ char *encode_ir_pulses(rmt_item32_t *items, size_t length)
         {
             ESP_LOGI(TAG, "Ignore noise");
         }
+        else if (pulses < 2)
+        {
+            ESP_LOGI(TAG, "Ignore repeat command.");
+        }
         else
         {
             cJSON *root = cJSON_CreateObject();
