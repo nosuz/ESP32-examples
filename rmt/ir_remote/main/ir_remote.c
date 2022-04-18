@@ -11,12 +11,12 @@
 #include "ir_encoder.h"
 #include "ir_decoder.h"
 
-#define BUTTON_PIN 5
+#define BUTTON_PIN CONFIG_IR_TRIGER_GPIO
 
 static const char *TAG = "main";
 
-static rmt_channel_t rx_channel = 0;
-static rmt_channel_t tx_channel = 1;
+static rmt_channel_t tx_channel = CONFIG_IR_TX_CHANNEL;
+static rmt_channel_t rx_channel = CONFIG_IR_RX_CHANNEL;
 
 static TimerHandle_t press_timer;
 
@@ -69,7 +69,7 @@ void send_ir_data(void *arg)
     // setup triger button
     config_gpio();
     // setup IR send port
-    rmt_config_t rmt_tx_config = RMT_DEFAULT_CONFIG_TX(2, tx_channel);
+    rmt_config_t rmt_tx_config = RMT_DEFAULT_CONFIG_TX(CONFIG_IR_TX_GPIO, tx_channel);
     rmt_tx_config.tx_config.carrier_en = true;
     rmt_config(&rmt_tx_config);
     rmt_driver_install(tx_channel, 0, 0);
@@ -110,7 +110,7 @@ void app_main(void)
     rmt_item32_t *items = NULL;
     size_t length = 0;
 
-    rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(19, rx_channel);
+    rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(CONFIG_IR_RX_GPIO, rx_channel);
     rmt_config(&rmt_rx_config);
     rmt_driver_install(rx_channel, 1000, 0);
 

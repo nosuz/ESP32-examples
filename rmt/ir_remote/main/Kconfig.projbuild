@@ -1,0 +1,23 @@
+menu "IR Remote Configuration"
+
+    config IR_TRIGER_GPIO
+        int "IR Triger GPIO"
+        default 5
+
+    config IR_TX_GPIO
+        int "IR TX GPIO"
+        default 2
+
+    config IR_RX_GPIO
+        int "IR RX GPIO"
+        default 19
+
+    config IR_TX_CHANNEL
+        int "IR TX Channel Number"
+        default 0
+
+    config IR_RX_CHANNEL
+        int "IR RX Channel Number"
+        default 1
+
+endmenu
