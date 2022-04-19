@@ -79,6 +79,7 @@ void send_ir_data(void *arg)
         // wait triger
         xSemaphoreTake(send_semaphore, portMAX_DELAY);
         ESP_LOGI(TAG, "Trigered sending IR data");
+        rmt_rx_stop(rx_channel);
 
         // parse JSON
         if (json != NULL)
@@ -99,6 +100,9 @@ void send_ir_data(void *arg)
         rmt_write_items(tx_channel, items, length, true); // true: block untile completed transfer.
         free(items);
         items = NULL;
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+        rmt_rx_start(rx_channel, true);
     }
 }
 
