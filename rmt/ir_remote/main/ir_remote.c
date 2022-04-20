@@ -61,9 +61,6 @@ void config_gpio(void)
 
 void send_ir_data(void *arg)
 {
-    rmt_item32_t *items = NULL;
-    size_t length = 0;
-
     send_semaphore = xSemaphoreCreateBinary();
 
     // setup triger button
@@ -84,22 +81,21 @@ void send_ir_data(void *arg)
         // parse JSON
         if (json != NULL)
             ESP_LOGI(TAG, "Send: %s", json);
-        decode_ir_pulses(json, &items, &length);
-        ESP_LOGI(TAG, "Items: %d (%p)", length, items);
-        if (items == NULL)
+        RMT_ITEMS *rmt_items = decode_ir_pulses(json);
+        ESP_LOGI(TAG, "Items: %d (%p)", rmt_items->length, rmt_items->items);
+        if (rmt_items == NULL)
             continue;
 
         // confirm sending pulses
         ESP_LOGI(TAG, "Send IR data");
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < rmt_items->length; i++)
         {
             ESP_LOGI(TAG, "ON: %d, OFF: %d",
-                     items[i].duration0,
-                     items[i].duration1);
+                     rmt_items->items[i].duration0,
+                     rmt_items->items[i].duration1);
         }
-        rmt_write_items(tx_channel, items, length, true); // true: block untile completed transfer.
-        free(items);
-        items = NULL;
+        rmt_write_items(tx_channel, rmt_items->items, rmt_items->length, true); // true: block untile completed transfer.
+        delete_rmt_items(rmt_items);
 
         vTaskDelay(pdMS_TO_TICKS(100));
         rmt_rx_start(rx_channel, true);
