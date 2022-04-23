@@ -48,7 +48,7 @@ esp_err_t adt7410_read_temp(float *temp)
         return ret;
     }
 
-    int16_t value = i2c_data.value >> 3;
+    int16_t value = ((int16_t)i2c_data.value) >> 3;
     *temp = (float)value * 0.0625;
 
     return ret;
