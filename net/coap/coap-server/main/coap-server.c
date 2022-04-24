@@ -182,6 +182,11 @@ static void coap_example_server(void *p)
 
         wait_ms = COAP_RESOURCE_CHECK_TIME * 1000;
 
+        ESP_LOGI(TAG, "Start CoAP service");
+        ns_start_mdns();
+        ns_add_mdns("_coap", "_udp", 5683);
+        ns_add_mdns("_coap", "_tcp", 5683);
+
         while (1)
         {
             int result = coap_io_process(ctx, wait_ms);
