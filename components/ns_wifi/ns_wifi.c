@@ -235,7 +235,11 @@ esp_err_t wifi_init(void)
 
     if (start_ap_select | pressed_triger())
     {
-        ESP_LOGW(TAG, "No AP info in NVS or Pressed triger button");
+        if (start_ap_select)
+            ESP_LOGW(TAG, "No AP info in NVS");
+        else
+            ESP_LOGW(TAG, "Pressed AP select button");
+
         wifi_ap_select_mode();
     }
 
