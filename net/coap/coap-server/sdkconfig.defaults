@@ -1,0 +1,9 @@
+CONFIG_LWIP_DHCP_DOES_ARP_CHECK=n
+# Fix Request Header Fields Too Large
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+
+# (Top) → Serial flasher config → Flash size
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# (Top) → Partition Table → Partition Table
+CONFIG_PARTITION_TABLE_CUSTOM=y
