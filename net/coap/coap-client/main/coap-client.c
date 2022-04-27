@@ -261,7 +261,8 @@ static void coap_example_client(void *p)
         }
 
         request = coap_new_pdu(coap_is_mcast(dst_addr) ? COAP_MESSAGE_NON : COAP_MESSAGE_CON,
-                               COAP_REQUEST_CODE_GET, session);
+                               //    COAP_REQUEST_CODE_GET, session);
+                               COAP_REQUEST_CODE_POST, session);
         if (!request)
         {
             ESP_LOGE(TAG, "coap_new_pdu() failed");
@@ -279,10 +280,20 @@ static void coap_example_client(void *p)
          *   coap_insert_optlist(&optlist,
          *                       coap_new_optlist(COAP_OPTION_CONTENT_FORMAT,
          *                                        coap_encode_var_safe (buf, sizeof (buf),
-         *                                                              COAP_MEDIATYPE_APPLICATION_JSON));
+         *                                                              COAP_MEDIATYPE_APPLICATION_JSON),
+         *                                        buf));
          * Add in here the POST data of length length. E.G.
          *   coap_add_data_large_request(session, request length, data, NULL, NULL);
          */
+        u_char buf[4];
+        coap_insert_optlist(&optlist,
+                            coap_new_optlist(COAP_OPTION_CONTENT_FORMAT,
+                                             coap_encode_var_safe(buf, sizeof(buf),
+                                                                  COAP_MEDIATYPE_APPLICATION_JSON),
+                                             buf));
+
+        char data[] = "{\"temp\": 1234}";
+        coap_add_data_large_request(session, request, strlen(data), (u_char *)data, NULL, NULL);
 
         coap_add_optlist_pdu(request, &optlist);
 
