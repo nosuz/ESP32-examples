@@ -31,6 +31,7 @@ Arduino を使用している方が多いようですが、もう少し底辺か
 | Google Spreadsheet サンプル        | Google Spreadsheet にデータを追記するサンプル。                                                    | [app/google](app/google)                                 |
 | Gmail サンプル                     | Gmail でメールを送るサンプル。                                                                     | [app/gmail](app/gmail)                                   |
 | 赤外線リモコン                     | 受信した赤外線リモコンのデータを JSON 形式にエンコードと再生する。                                 | [rmt/ir_remote](rmt/ir_remote)                           |
+| CoAP Client サンプル               | CoAP で環境情報を送信するサンプル。                                                                | [app/coap/coap-client](app/coap/coap-client)             |
 
 ## 使用方法
 
