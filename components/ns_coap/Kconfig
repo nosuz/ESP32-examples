@@ -1,0 +1,7 @@
+menu "NS CoAP Configuration"
+
+    config COAP_URI
+        string "CoAP Server URI"
+        default ""
+
+endmenu
