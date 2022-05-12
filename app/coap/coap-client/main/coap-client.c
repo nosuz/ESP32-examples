@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <time.h>
-#include <sys/time.h>
+// #include <time.h>
+// #include <sys/time.h>
 #include "esp_log.h"
 #include "esp_sleep.h"
 #include "cJSON.h"
@@ -10,10 +10,10 @@
 #include "ns_shtc3.h"
 
 #include "ns_wifi.h"
-#include "ns_sntp.h"
+// #include "ns_sntp.h"
 #include "ns_coap.h"
 
-#define STRFTIME_SIZE 64
+// #define STRFTIME_SIZE 64
 #define VOLTS_HIST 3
 
 static const char *TAG = "main";
@@ -24,9 +24,9 @@ RTC_DATA_ATTR static float volts[VOLTS_HIST] = {0};
 
 void app_main(void)
 {
-    time_t now;
-    struct tm timeinfo;
-    char strftime_buf[STRFTIME_SIZE];
+    // time_t now;
+    // struct tm timeinfo;
+    // char strftime_buf[STRFTIME_SIZE];
 
     uint32_t voltage = 0;
     float battery = 0;
@@ -91,19 +91,19 @@ void app_main(void)
                battery,
                boot_count);
 
-        init_sntp(3600);
-        sync_sntp();
+        // init_sntp(3600);
+        // sync_sntp();
 
-        time(&now);
-        localtime_r(&now, &timeinfo);
-        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-        ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
+        // time(&now);
+        // localtime_r(&now, &timeinfo);
+        // strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        // ESP_LOGI(TAG, "Local date/time: %s", strftime_buf);
 
         // https://github.com/DaveGamble/cJSON#data-structure
         cJSON *root = cJSON_CreateObject();
 
-        strftime(strftime_buf, sizeof(strftime_buf), "%Y/%m/%d %T", &timeinfo);
-        cJSON_AddStringToObject(root, "ti", strftime_buf);
+        // strftime(strftime_buf, sizeof(strftime_buf), "%Y/%m/%d %T", &timeinfo);
+        // cJSON_AddStringToObject(root, "ti", strftime_buf);
 
         cJSON_AddStringToObject(root, "id", mac_addr);
 
