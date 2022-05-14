@@ -1,0 +1,8 @@
+I (44749) wifi: WIFI_EVENT_STA_DISCONNECTED: disconnected from the AP
+I (44759) wifi: retry to connect to the AP: 1
+I (46799) wifi: WIFI_EVENT_STA_DISCONNECTED: disconnected from the AP
+I (46809) wifi: retry to connect to the AP: 2
+I (48849) wifi: WIFI_EVENT_STA_DISCONNECTED: disconnected from the AP
+I (48859) wifi: retry to connect to the AP: 3
+I (50899) wifi: WIFI_EVENT_STA_DISCONNECTED: disconnected from the AP
+I (50909) wifi: failed to connect the AP

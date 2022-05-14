@@ -15,6 +15,7 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wps.h"
+#include "esp_sleep.h"
 
 #include "ns_nvs.h"
 #include "ns_gpio.h"
@@ -32,13 +33,17 @@ static EventGroupHandle_t s_wifi_event_group;
  * - we are connected to the AP with an IP
  * - we failed to connect after the maximum amount of retries */
 #define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT BIT1
 
 static const char *TAG = "wifi";
 
+RTC_DATA_ATTR static int s_retry_num = 0;
+RTC_DATA_ATTR static int sleep_length = 0;
+
+RTC_DATA_ATTR static bool new_ap_param = false;
+RTC_DATA_ATTR static bool start_ap_select = false;
+
 wifi_config_t wifi_ap_configs[MAX_WPS_AP_CRED];
 int s_ap_creds_num = 0;
-int s_retry_num = 0;
 bool wifi_stop_flag = false;
 bool initialized_wifi = false;
 bool started_wifi = false;
@@ -89,28 +94,42 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
             // skip retry connect while WPS in progress
             ESP_LOGI(TAG, "AP select mode. Give up reconnection.");
         }
-        else if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
-        {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP: %d", s_retry_num);
-        }
         else if (ap_idx < s_ap_creds_num)
         {
             /* Try the next AP credential if first one fails */
-
-            if (ap_idx < s_ap_creds_num)
-            {
-                ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_ap_configs[ap_idx].sta.ssid);
-                ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[ap_idx++]));
-                esp_wifi_connect();
-            }
-            s_retry_num = 0;
+            ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_ap_configs[ap_idx].sta.ssid);
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[ap_idx++]));
+            esp_wifi_connect();
         }
         else
         {
-            ESP_LOGI(TAG, "failed to connect the AP");
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            if (s_retry_num == 0)
+                sleep_length = 0;
+
+            if (new_ap_param)
+            {
+                ESP_LOGE(TAG, "Set wrong AP param.");
+                start_ap_select = true;
+                // esp_restart();
+                esp_sleep_enable_timer_wakeup(1000000LL);
+            }
+            else
+            {
+                s_retry_num++;
+                ESP_LOGW(TAG, "retry to connect to the AP: %d", s_retry_num);
+                if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
+                {
+                    sleep_length += s_retry_num * 20;
+                    ESP_LOGI(TAG, "Sleep %d sec.", sleep_length);
+                    esp_sleep_enable_timer_wakeup(1000000LL * sleep_length);
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "failed to connect the AP");
+                    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+                }
+            }
+            esp_deep_sleep_start();
         }
         break;
     case WIFI_EVENT_STA_WPS_ER_SUCCESS:
@@ -194,14 +213,15 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base,
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
     ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
+    // reset boot params
     s_retry_num = 0;
+    new_ap_param = false;
+    start_ap_select = false;
     xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
 }
 
 esp_err_t wifi_init(void)
 {
-    bool start_ap_select = false;
-
     ESP_LOGI(TAG, "Init another modules");
     nvs_init();
     config_gpio();
@@ -220,9 +240,16 @@ esp_err_t wifi_init(void)
     // enabled in default.
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
-    if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
+    if (start_ap_select)
+    {
+        ESP_LOGW(TAG, "Restarted as AP select mode");
+    }
+    else if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
         start_ap_select = true;
-    ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
+    else
+    {
+        ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
+    }
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     s_wifi_event_group = xEventGroupCreate();
@@ -235,7 +262,11 @@ esp_err_t wifi_init(void)
 
     if (start_ap_select | pressed_triger())
     {
-        ESP_LOGW(TAG, "No AP info in NVS or Pressed triger button");
+        if (start_ap_select)
+            ESP_LOGW(TAG, "No valid AP info in NVS");
+        else
+            ESP_LOGW(TAG, "Pressed AP select button");
+
         wifi_ap_select_mode();
     }
 
@@ -282,9 +313,9 @@ void wifi_wps_start(void)
 int wifi_wait_connection(void)
 {
     int connected = 0;
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    /* Waiting until the connection is established (WIFI_CONNECTED_BIT).
+    The bits are set by event_handler() (see above) */
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
      * happened. */
@@ -292,10 +323,6 @@ int wifi_wait_connection(void)
     {
         connected = 1;
         ESP_LOGI(TAG, "Connected to AP");
-    }
-    else if (bits & WIFI_FAIL_BIT)
-    {
-        ESP_LOGI(TAG, "Failed to connect AP");
     }
     else
     {
@@ -323,7 +350,6 @@ void wifi_disconnect(void)
     // ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler));
     esp_wifi_stop();
     xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-    xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
 }
 
 static void print_auth_mode(int authmode)
@@ -430,6 +456,7 @@ void wifi_ap_select_mode(void)
     ESP_LOGI(TAG, "Wait AP select ...");
     xSemaphoreTake(restart_semaphore, portMAX_DELAY);
     ESP_LOGI(TAG, "Selected AP");
+    new_ap_param = true;
 
     vTaskDelay(pdMS_TO_TICKS(1000));
     if (server)

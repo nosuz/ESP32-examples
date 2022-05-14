@@ -1,6 +1,6 @@
 build/
 sdkconfig
-sdkconfig.*
+sdkconfig.old
 .vscode/
 client_secret.json
 .config.yaml
