@@ -15,6 +15,7 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wps.h"
+#include "esp_sleep.h"
 
 #include "ns_nvs.h"
 #include "ns_gpio.h"
@@ -32,13 +33,14 @@ static EventGroupHandle_t s_wifi_event_group;
  * - we are connected to the AP with an IP
  * - we failed to connect after the maximum amount of retries */
 #define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT BIT1
 
 static const char *TAG = "wifi";
 
+RTC_DATA_ATTR static int s_retry_num = 0;
+RTC_DATA_ATTR static int sleep_length = 0;
+
 wifi_config_t wifi_ap_configs[MAX_WPS_AP_CRED];
 int s_ap_creds_num = 0;
-int s_retry_num = 0;
 bool wifi_stop_flag = false;
 bool initialized_wifi = false;
 bool started_wifi = false;
@@ -89,28 +91,31 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
             // skip retry connect while WPS in progress
             ESP_LOGI(TAG, "AP select mode. Give up reconnection.");
         }
-        else if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
-        {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP: %d", s_retry_num);
-        }
         else if (ap_idx < s_ap_creds_num)
         {
             /* Try the next AP credential if first one fails */
-
-            if (ap_idx < s_ap_creds_num)
-            {
-                ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_ap_configs[ap_idx].sta.ssid);
-                ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[ap_idx++]));
-                esp_wifi_connect();
-            }
-            s_retry_num = 0;
+            ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_ap_configs[ap_idx].sta.ssid);
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_ap_configs[ap_idx++]));
+            esp_wifi_connect();
         }
         else
         {
-            ESP_LOGI(TAG, "failed to connect the AP");
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            if (s_retry_num == 0)
+                sleep_length = 0;
+            s_retry_num++;
+            ESP_LOGW(TAG, "retry to connect to the AP: %d", s_retry_num);
+            if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
+            {
+                sleep_length += s_retry_num * 20;
+                ESP_LOGI(TAG, "Sleep %d sec.", sleep_length);
+                esp_sleep_enable_timer_wakeup(1000000LL * sleep_length);
+            }
+            else
+            {
+                ESP_LOGE(TAG, "failed to connect the AP");
+                esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+            }
+            esp_deep_sleep_start();
         }
         break;
     case WIFI_EVENT_STA_WPS_ER_SUCCESS:
@@ -286,9 +291,9 @@ void wifi_wps_start(void)
 int wifi_wait_connection(void)
 {
     int connected = 0;
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    /* Waiting until the connection is established (WIFI_CONNECTED_BIT).
+    The bits are set by event_handler() (see above) */
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
      * happened. */
@@ -296,10 +301,6 @@ int wifi_wait_connection(void)
     {
         connected = 1;
         ESP_LOGI(TAG, "Connected to AP");
-    }
-    else if (bits & WIFI_FAIL_BIT)
-    {
-        ESP_LOGI(TAG, "Failed to connect AP");
     }
     else
     {
@@ -327,7 +328,6 @@ void wifi_disconnect(void)
     // ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler));
     esp_wifi_stop();
     xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-    xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
 }
 
 static void print_auth_mode(int authmode)
