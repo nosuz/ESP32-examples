@@ -39,6 +39,9 @@ static const char *TAG = "wifi";
 RTC_DATA_ATTR static int s_retry_num = 0;
 RTC_DATA_ATTR static int sleep_length = 0;
 
+RTC_DATA_ATTR static bool new_ap_param = false;
+RTC_DATA_ATTR static bool start_ap_select = false;
+
 wifi_config_t wifi_ap_configs[MAX_WPS_AP_CRED];
 int s_ap_creds_num = 0;
 bool wifi_stop_flag = false;
@@ -102,18 +105,29 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
         {
             if (s_retry_num == 0)
                 sleep_length = 0;
-            s_retry_num++;
-            ESP_LOGW(TAG, "retry to connect to the AP: %d", s_retry_num);
-            if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
+
+            if (new_ap_param)
             {
-                sleep_length += s_retry_num * 20;
-                ESP_LOGI(TAG, "Sleep %d sec.", sleep_length);
-                esp_sleep_enable_timer_wakeup(1000000LL * sleep_length);
+                ESP_LOGE(TAG, "Set wrong AP param.");
+                start_ap_select = true;
+                // esp_restart();
+                esp_sleep_enable_timer_wakeup(1000000LL);
             }
             else
             {
-                ESP_LOGE(TAG, "failed to connect the AP");
-                esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+                s_retry_num++;
+                ESP_LOGW(TAG, "retry to connect to the AP: %d", s_retry_num);
+                if (s_retry_num < CONFIG_AP_MAXIMUM_RETRY)
+                {
+                    sleep_length += s_retry_num * 20;
+                    ESP_LOGI(TAG, "Sleep %d sec.", sleep_length);
+                    esp_sleep_enable_timer_wakeup(1000000LL * sleep_length);
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "failed to connect the AP");
+                    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+                }
             }
             esp_deep_sleep_start();
         }
@@ -199,14 +213,15 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base,
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
     ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
+    // reset boot params
     s_retry_num = 0;
+    new_ap_param = false;
+    start_ap_select = false;
     xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
 }
 
 esp_err_t wifi_init(void)
 {
-    bool start_ap_select = false;
-
     ESP_LOGI(TAG, "Init another modules");
     nvs_init();
     config_gpio();
@@ -225,9 +240,16 @@ esp_err_t wifi_init(void)
     // enabled in default.
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
-    if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
+    if (start_ap_select)
+    {
+        ESP_LOGW(TAG, "Restarted as AP select mode");
+    }
+    else if (strlen(&wifi_config.sta.ssid) == 0 || strlen(&wifi_config.sta.password) == 0)
         start_ap_select = true;
-    ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
+    else
+    {
+        ESP_LOGI(TAG, "use ssid and password stored in nvs. SSID: %s", wifi_config.sta.ssid);
+    }
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
     s_wifi_event_group = xEventGroupCreate();
@@ -241,7 +263,7 @@ esp_err_t wifi_init(void)
     if (start_ap_select | pressed_triger())
     {
         if (start_ap_select)
-            ESP_LOGW(TAG, "No AP info in NVS");
+            ESP_LOGW(TAG, "No valid AP info in NVS");
         else
             ESP_LOGW(TAG, "Pressed AP select button");
 
@@ -434,6 +456,7 @@ void wifi_ap_select_mode(void)
     ESP_LOGI(TAG, "Wait AP select ...");
     xSemaphoreTake(restart_semaphore, portMAX_DELAY);
     ESP_LOGI(TAG, "Selected AP");
+    new_ap_param = true;
 
     vTaskDelay(pdMS_TO_TICKS(1000));
     if (server)
