@@ -4,6 +4,7 @@ sdkconfig.old
 .vscode/
 client_secret.json
 .config.yaml
+.clasp.json
 .Rproj.user
 .Rhistory
 .Rdata
