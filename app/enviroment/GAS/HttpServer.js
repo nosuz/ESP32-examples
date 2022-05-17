@@ -136,6 +136,20 @@ function extractTodayRedords() {
   return records
 }
 
+function extractLastHalfYearRecords() {
+  const today = new Date(Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd') + 'T00:00:00+09:00')
+  const date = new Date()
+  date.setMonth(today.getMonth() - 6)
+
+  const sheet = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId())
+  const env = sheet.getSheetByName("env")
+
+  const data = env.getDataRange().getValues()
+  const records = data.filter((row) => row[0] > date && row[0] < today)
+  // console.log(records)
+  return records
+}
+
 function highTempDays() {
   const sheet = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId())
   const env = sheet.getSheetByName("env")
@@ -162,37 +176,56 @@ function makeStatusLine(records) {
   return statuses.join()
 }
 
-function minTemp() {
-  const records = extractTodayRedords()
+function getMinTemp(records) {
   const rows = records.flatMap((row) => [row[2], row[3]])
   // const temp = Math.min(...rows)
   const temp = Math.min.apply(null, rows)
   // console.log(temp.toFixed(2))
+  return temp
+}
 
-  // get status
+function getMaxTemp(records) {
+  const rows = records.flatMap((row) => [row[2], row[3]])
+  // const temp = Math.max(...rows)
+  const temp = Math.max.apply(null, rows)
+  // console.log(temp.toFixed(2))
+  return temp
+}
+
+function minTemp() {
+  const records = extractTodayRedords()
+  const temp = getMinTemp(records)
+
+  const min_temp = getMinTemp(extractLastHalfYearRecords())
 
   const today = new Date()
   const date = Utilities.formatDate(today, 'Asia/Tokyo', 'M月d日')
-  let  message = "今朝(" + date + ")の最低室温は、" + temp.toFixed(1) + "℃でした。"
+  let  message = "今朝(" + date + ")の最低室温は、" + temp.toFixed(1) + "℃でした。\n"
   const high_temp_days = highTempDays()
   if (high_temp_days > 2) {
     // ignore 2 days over 25C
-    message += "連続" + high_temp_days + "日の熱帯夜です。"
+    message += "連続" + high_temp_days + "日の熱帯夜です。\n"
+  } else if (temp < 10.0 && temp < min_temp) {
+    // the coldest morning
+    message += "過去半年で最も寒い朝です。\n"
   }
-  message += "\n" + makeStatusLine(records) + "\n#ESP32 #GAS"
+  message += makeStatusLine(records) + "\n#ESP32 #GAS"
   console.log(message)
   updateStatus(message)
 }
 
 function maxTemp() {
   const records = extractTodayRedords()
-  const rows = records.flatMap((row) => [row[2], row[3]])
-  // const temp = Math.max(...rows)
-  const temp = Math.max.apply(null, rows)
-  // console.log(temp.toFixed(2))
+  const temp = getMaxTemp(records)
+
+  const max_temp = getMaxTemp(extractLastHalfYearRecords())
+
 
   const date = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'M月d日')
   let message = "今日(" + date + ")の最高室温は、" + temp.toFixed(1) + "℃でした。\n"
+  if (temp > 30.0 && temp > max_temp) {
+    message += "過去半年で最も暑い一日でした。\n"
+  }
   message += makeStatusLine(records) + "\n#ESP32 #GAS"
   console.log(message)
   updateStatus(message)
