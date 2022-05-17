@@ -50,7 +50,7 @@ gs4_auth()
 # ~/.Renviron
 #esp32 <- read_sheet(Sys.getenv("ESP32_SHEET"))
 config <- config::get(file=".config.yaml")
-read_sheet(config$ESP32_SHEET) %>% 
+read_sheet(config$ESP32_SHEET, sheet = "eneloop") %>% 
   # tzone = "JST" not worked.
   mutate(DATE_TIME = force_tz(DATE_TIME,tzone = "Asia/Tokyo")) -> esp32
 #View(esp32)
