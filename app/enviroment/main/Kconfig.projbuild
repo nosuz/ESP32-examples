@@ -1,0 +1,17 @@
+menu "Enviroment Reporting Configuration"
+
+    config SPREADSHEET_API_URL
+        string "Google Spreadsheet Web Apps URL"
+        default ""
+
+    config SECRET_TOKEN
+        string "Token to limit access"
+        default "Secret_Token"
+
+    config SLEEP_LENGTH
+        int "Reporting interval (min.)"
+        default 20
+        help
+            Sleep length in minutes.
+
+endmenu
