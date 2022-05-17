@@ -88,9 +88,11 @@ function refreshToken() {
   const response = UrlFetchApp.fetch(url, options);
   const json = JSON.parse(response);
 
-  props.setProperty("access_token", json.access_token)
-  props.setProperty("refresh_token", json.refresh_token)
-  props.setProperty("expire_at", (getTimestamp() + json.expires_in - 60).toString()) // stored as String
+  props.setProperties({
+    "access_token": json.access_token,
+    "refresh_token": json.refresh_token,
+    "expire_at": (getTimestamp() + json.expires_in - 60).toString() // stored as String
+  })
   // console.log(json)
 
   console.log("updated access token")
