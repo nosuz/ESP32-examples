@@ -15,7 +15,6 @@ export default defineConfig(({ command, mode }) => {
                 purgecss({
                   content: ['dist/*.html', 'dist/assets/*.js'],
                   css: ['dist/assets/*.css'],
-                  safelist: [/filepond-*/],
                 })
           ]
         }
