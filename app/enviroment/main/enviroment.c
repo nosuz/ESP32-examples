@@ -13,6 +13,7 @@
 #include "ns_wifi.h"
 
 #define VOLTS_HIST 3
+#define MAX_UNEXPECTED_REBOOT 2
 
 // URL for Google Spreadsheet HTTP access
 static const char *url = CONFIG_SPREADSHEET_API_URL;
@@ -21,6 +22,8 @@ static const char *TAG = "main";
 
 RTC_DATA_ATTR static int boot_count = 0;
 RTC_DATA_ATTR static float up_time = 0;
+RTC_DATA_ATTR static time_t last_boot = 0;
+RTC_DATA_ATTR static int unexpected_reboot = 0;
 
 RTC_DATA_ATTR static float volts[VOLTS_HIST] = {0};
 
@@ -45,6 +48,26 @@ void app_main(void)
 
     uint8_t base_mac_addr[6] = {0};
     char mac_addr[18];
+
+    time_t now;
+    time(&now);
+    if ((boot_count > 0) && ((now - last_boot) < 180)) // expect the reboot interval is at least 3 min.
+    {
+        // unexpected reboot
+        unexpected_reboot++;
+        ESP_LOGE(TAG, "Unexpected reboot: %d", unexpected_reboot);
+        if (unexpected_reboot > MAX_UNEXPECTED_REBOOT)
+        {
+            ESP_LOGE(TAG, "Give up working and go into deep sleep");
+            esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+            esp_deep_sleep_start();
+        }
+    }
+    else
+    {
+        unexpected_reboot = 0;
+    }
+    last_boot = now;
 
     ++boot_count;
     ESP_LOGI(TAG, "Boot count: %d", boot_count);
