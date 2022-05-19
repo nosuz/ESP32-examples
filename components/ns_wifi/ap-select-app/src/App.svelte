@@ -1,8 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import axios from "axios";
-  import "bootstrap/dist/css/bootstrap.min.css";
-  import { Modal } from "bootstrap";
+  import { Toast } from "bootstrap";
 
   let selected_ap;
   let ap_password = "";
@@ -33,8 +32,8 @@
       // });
       console.log(res);
 
-      var myModal = new Modal(document.getElementById("postOkDialog"), {});
-      myModal.show();
+      let okToast = new Toast(document.getElementById("postOkToast"), {});
+      okToast.show();
     } catch (e) {
       console.log(e);
     }
@@ -104,33 +103,25 @@
     </div>
   </form>
 
-  <!-- Modal -->
-  <div
-    class="modal fade"
-    id="postOkDialog"
-    data-bs-backdrop="static"
-    data-bs-keyboard="false"
-    tabindex="-1"
-    aria-labelledby="postOkDialogLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="postOkDialogLabel">Updated AP params.</h5>
-        </div>
-        <div class="modal-body">Connecting to {selected_ap}</div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal">OK</button
-          >
-        </div>
+  <!-- Toast -->
+  <div class="position-absolute p-3 top-0 start-50  translate-middle-x">
+    <div class="toast" id="postOkToast">
+      <div class="toast-header">
+        <strong class="me-auto">Updated AP params</strong>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="toast"
+          aria-label="Close"
+        />
+      </div>
+      <div class="toast-body">
+        Connecting to {selected_ap}
       </div>
     </div>
   </div>
 </main>
 
 <style>
+  @import "bootstrap/dist/css/bootstrap.min.css";
 </style>
